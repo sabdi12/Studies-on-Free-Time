@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decoding the swap-spread regression</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F2EC; --paper-2:#FBFAF6;
+    --ink:#1A1C22; --ink-soft:#414550; --ink-faint:#8A8676;
+    --rule:#E2DFD3; --rule-strong:#D2CEBE; --line:#A7A290;
+    --spread:#2F7A57; --spread-soft:#E2F0E8;   /* swap spreads */
+    --narrow:#2F7A57; --narrow-soft:#E2F0E8;   /* more negative / narrowing */
+    --widen:#B5792A;  --widen-soft:#F6ECDB;    /* less negative / widening */
+    --tsy:#2D5BA8;    --tsy-soft:#E2EAF6;       /* treasury / supply */
+    --warn:#A8761A;
+    --maxw:980px; --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper);
+    background-image:repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--rule) 28px);
+    color:var(--ink); font-family:"Inter",system-ui,sans-serif; font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased;}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px;}
+
+  #progress{position:fixed; top:0; left:0; height:3px; width:0%; background:var(--spread); z-index:60; transition:width .1s linear;}
+  #topnav{position:sticky; top:0; z-index:40; background:rgba(244,242,236,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--rule-strong);}
+  #topnav .wrap{display:flex; align-items:center; gap:13px; height:52px; overflow-x:auto; scrollbar-width:none;}
+  #topnav .wrap::-webkit-scrollbar{display:none;}
+  #topnav .brand{font-family:"Space Grotesk"; font-weight:700; letter-spacing:-.01em; white-space:nowrap; font-size:15px;}
+  #topnav a{color:var(--ink-soft); text-decoration:none; font-size:12.5px; font-family:"IBM Plex Mono"; white-space:nowrap; padding:3px 0; border-bottom:2px solid transparent;}
+  #topnav a:hover{color:var(--spread);}
+  #topnav a.active{color:var(--ink); border-bottom-color:var(--widen);}
+
+  header.hero{padding:62px 0 30px;}
+  .vol{font-family:"IBM Plex Mono"; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--widen); margin-bottom:16px;}
+  h1{font-family:"Space Grotesk"; font-weight:700; font-size:clamp(33px,6vw,58px); line-height:1.04; letter-spacing:-.025em; margin:0 0 16px;}
+  h1 .s{color:var(--spread);}
+  .dek{font-size:20px; color:var(--ink-soft); max-width:680px; margin:0 0 24px;}
+  .note{background:var(--paper-2); border:1px solid var(--rule-strong); border-left:3px solid var(--spread); padding:15px 20px; border-radius:var(--radius); max-width:700px; font-size:15.5px; color:var(--ink-soft);}
+  .note b{color:var(--ink);}
+
+  section{padding:42px 0; border-top:1px solid var(--rule-strong);}
+  .sec-no{font-family:"IBM Plex Mono"; font-size:13px; color:var(--widen); letter-spacing:.08em;}
+  h2{font-family:"Space Grotesk"; font-weight:700; font-size:clamp(25px,4.3vw,36px); line-height:1.1; letter-spacing:-.02em; margin:6px 0 8px;}
+  .sub{color:var(--ink-faint); font-size:15px; margin:0 0 22px; max-width:680px;}
+  h3{font-family:"Space Grotesk"; font-weight:600; font-size:20px; margin:30px 0 8px;}
+  p{margin:0 0 15px; max-width:720px;}
+  .lead{font-size:18.5px;}
+  strong{font-weight:600;}
+  .s-t{color:var(--spread); font-weight:600;} .n-t{color:var(--narrow); font-weight:600;} .w-t{color:var(--widen); font-weight:600;}
+  code{font-family:"IBM Plex Mono"; background:var(--paper-2); border:1px solid var(--rule-strong); border-radius:4px; padding:1px 6px; font-size:14px;}
+
+  ul.clean{max-width:720px; padding-left:0; list-style:none; margin:0 0 15px;}
+  ul.clean li{position:relative; padding-left:24px; margin-bottom:9px;}
+  ul.clean li::before{content:"›"; position:absolute; left:5px; color:var(--widen); font-family:"IBM Plex Mono"; font-weight:700;}
+
+  .card{background:var(--paper-2); border:1px solid var(--rule-strong); border-radius:var(--radius); padding:18px 20px; margin:20px 0; max-width:740px;}
+  .card .tag{font-family:"IBM Plex Mono"; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:7px;}
+  .why{border-left:3px solid var(--widen);}
+  .idea{background:var(--spread-soft); border:1px solid #C2DDCC; border-left:3px solid var(--spread);}
+  .warnbox{background:#FCFBEE; border:1px solid #E9E6C6; border-left:3px solid var(--warn);}
+
+  .eq{font-family:"IBM Plex Mono"; background:#15171D; color:#E9E7DE; padding:14px 18px; border-radius:var(--radius); margin:16px 0; max-width:740px; overflow-x:auto; font-size:14.5px; line-height:1.85;}
+  .eq .v{color:#7FB0FF;} .eq .o{color:#E0A867;} .eq .c{color:#86836f;} .eq .g{color:#79C79C;}
+
+  table.data{border-collapse:collapse; width:100%; max-width:760px; margin:18px 0; font-family:"IBM Plex Mono"; font-size:13px; background:var(--paper-2);}
+  table.data th, table.data td{border:1px solid var(--rule-strong); padding:7px 10px; text-align:right;}
+  table.data th{background:#EAE7DB; font-weight:600; color:var(--ink);}
+  table.data td.lbl, table.data th.lbl{text-align:left; color:var(--ink-soft);}
+  table.data td.pos{color:var(--widen); font-weight:600;} table.data td.neg{color:var(--narrow); font-weight:600;}
+  caption{caption-side:bottom; text-align:left; font-family:"Inter"; font-size:12.5px; color:var(--ink-faint); padding-top:8px; max-width:760px;}
+
+  /* driver deep cards */
+  .driver{border:1px solid var(--rule-strong); border-radius:8px; background:var(--paper-2); padding:18px 20px; margin:16px 0; max-width:760px;}
+  .driver.narrowing{border-top:4px solid var(--narrow);} .driver.widening{border-top:4px solid var(--widen);}
+  .driver .dh{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .driver h4{margin:0; font-family:"Space Grotesk"; font-size:18px;}
+  .driver .coef{font-family:"IBM Plex Mono"; font-size:13px; padding:2px 9px; border-radius:20px; font-weight:600;}
+  .coef.neg{background:var(--narrow-soft); color:var(--narrow);} .coef.pos{background:var(--widen-soft); color:var(--widen);}
+  .driver .unit{font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-faint); margin:2px 0 12px;}
+  .chain{font-family:"IBM Plex Mono"; font-size:12.5px; background:#15171D; color:#CFCDBF; border-radius:5px; padding:10px 13px; margin:10px 0; line-height:1.7; overflow-x:auto;}
+  .chain .hi{color:#79C79C;} .chain .ar{color:#E0A867;}
+  .driver .impact2020{font-size:13.5px; color:var(--ink-soft); margin-top:8px;}
+
+  /* COCKPIT */
+  .lab{background:#15171D; color:#E9E7DE; border-radius:10px; padding:24px; margin:26px 0; max-width:900px;}
+  .lab h3{color:#fff; margin-top:0;}
+  .lab .labsub{color:#A7A493; font-size:14px; margin-bottom:18px; max-width:none;}
+  .lab-grid{display:grid; grid-template-columns:1fr 1.05fr; gap:24px;}
+  @media(max-width:800px){ .lab-grid{grid-template-columns:1fr;} }
+  .slider-row{margin:14px 0;}
+  .slider-row .top{display:flex; justify-content:space-between; align-items:baseline; font-family:"IBM Plex Mono"; font-size:12.5px;}
+  .slider-row .nm{color:#E9E7DE;} .slider-row .cf{color:#8A8676; font-size:11px;}
+  .slider-row .delta{color:#7FB0FF;}
+  .slider-row input[type=range]{width:100%; accent-color:#3C8C63; cursor:pointer; margin-top:3px;}
+  .slider-row .impact{font-family:"IBM Plex Mono"; font-size:11.5px; margin-top:2px;}
+  .imp-narrow{color:#79C79C;} .imp-widen{color:#E0A867;}
+  .presets{display:flex; gap:7px; flex-wrap:wrap; margin:16px 0 4px;}
+  .presets button{flex:1 1 auto; background:#222631; color:#D6D3C4; border:1px solid #343948; border-radius:5px; padding:8px 6px; font-family:"IBM Plex Mono"; font-size:11px; cursor:pointer;}
+  .presets button:hover{background:#2C3140;}
+  canvas{width:100%; height:auto; background:#0F1116; border-radius:6px; border:1px solid #262932;}
+  .bignum{font-family:"IBM Plex Mono"; margin-top:14px; display:flex; align-items:baseline; gap:12px;}
+  .bignum .lab2{color:#A7A493; font-size:12px;} .bignum .val{font-size:30px; font-weight:600; color:#79C79C;}
+  .bignum .chg{font-size:13px;}
+  .verdict{margin-top:12px; padding:11px 14px; background:#0F1116; border-radius:6px; font-size:12.5px; line-height:1.6; color:#D6D3C4; border:1px solid #262932;}
+
+  /* mini stat visuals */
+  .statwrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:760px; margin:16px 0;}
+  @media(max-width:680px){ .statwrap{grid-template-columns:1fr;} }
+  .statcard{border:1px solid var(--rule-strong); border-radius:8px; background:var(--paper-2); padding:14px 16px;}
+  .statcard h4{margin:0 0 6px; font-family:"Space Grotesk"; font-size:15px;}
+  .statcard p{font-size:13px; color:var(--ink-soft); margin:6px 0 0;}
+  .statcard canvas{background:#15171D;}
+
+  .quiz{border:1px solid var(--rule-strong); border-radius:8px; background:var(--paper-2); padding:20px 22px; margin:20px 0; max-width:740px;}
+  .quiz .q{font-weight:600; margin-bottom:12px;}
+  .quiz button.opt{display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--rule-strong); border-radius:5px; padding:11px 14px; margin-bottom:8px; cursor:pointer; font-size:14.5px; font-family:"Inter"; transition:.12s;}
+  .quiz button.opt:hover{border-color:var(--spread);}
+  .quiz button.opt.correct{background:var(--spread-soft); border-color:var(--spread); color:var(--spread);}
+  .quiz button.opt.wrong{background:var(--widen-soft); border-color:var(--widen); color:var(--widen);}
+  .quiz .explain{display:none; margin-top:10px; font-size:14px; color:var(--ink-soft); border-left:3px solid var(--spread); padding-left:12px;}
+  .quiz .explain.show{display:block;}
+  .reset{background:var(--ink); color:#fff; border:none; border-radius:5px; padding:8px 14px; font-family:"IBM Plex Mono"; font-size:12px; cursor:pointer; margin-top:10px;}
+
+  footer{padding:46px 0 70px; border-top:1px solid var(--rule-strong); color:var(--ink-faint); font-size:13.5px;}
+  .disc{font-size:12px; margin-top:12px; max-width:740px;}
+  @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto; transition:none!important;} }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="topnav"><div class="wrap">
+  <span class="brand">The Spread Regression</span>
+  <a href="#s1">1·What's a regression</a>
+  <a href="#s2">2·The table</a>
+  <a href="#s3">3·The 5 drivers</a>
+  <a href="#s4">4·Cockpit</a>
+  <a href="#s5">5·Can you trust it</a>
+  <a href="#s6">6·Caveats</a>
+  <a href="#s7">7·Recap</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="vol">Deep-dive companion · the 30Y swap-spread driver model · J.P. Morgan, Sep 2020</div>
+  <h1>Five forces, one number:<br>decoding the <span class="s">swap-spread regression</span>.</h1>
+  <p class="dek">The deck claims a handful of drivers explain ~72% of how the 30-year swap spread moves. This page takes that one model apart — what a regression is, why each driver pushes the spread the way it does, and a cockpit where you rebuild the −46 → −60 projection yourself.</p>
+  <div class="note"><b>Quick refresher so this lands:</b> a <b>30Y swap spread</b> = the 30-year swap rate minus the 30-year Treasury yield. It was around <b>−46bp</b> in 2020 (swap rate <em>below</em> Treasury). "Narrowing" here means going <em>more negative</em> (−46 → −60); "widening" means moving back up toward zero. Keep that direction in mind and everything below clicks.</div>
+</div></header>
+
+<main class="wrap">
+
+<!-- 1 -->
+<section id="s1">
+  <div class="sec-no">PART 01</div>
+  <h2>What a regression actually is</h2>
+  <p class="sub">No stats background needed. A regression is just "a line of best fit through history that learns how much each thing matters."</p>
+
+  <p class="lead">Imagine plotting, for the last 10 years, every 6-month change in the swap spread against every 6-month change in (say) Treasury supply. You'd get a cloud of dots. A regression draws the <strong>single line that sits closest to all of them</strong> — and the slope of that line is your answer: "on average, when supply rose by 1 unit, the spread moved by <em>this much</em>."</p>
+  <p>With five drivers it's the same idea in five dimensions. The model spits out one number per driver — its <strong>coefficient</strong> — plus a baseline <strong>intercept</strong>. Put together:</p>
+  <div class="eq">predicted change in spread
+  = <span class="v">intercept</span>
+  <span class="o">+</span> coef₁ <span class="o">×</span> (change in driver 1)
+  <span class="o">+</span> coef₂ <span class="o">×</span> (change in driver 2)
+  <span class="o">+</span> … for all five drivers      <span class="c">// that's the whole model</span></div>
+
+  <ul class="clean">
+    <li><strong>Coefficient</strong> = sensitivity. "For each +1 unit of this driver, the spread moves by <em>coef</em> bp, holding the others fixed." A <span class="n-t">negative</span> coef means they move <em>oppositely</em>; a <span class="w-t">positive</span> one means <em>together</em>.</li>
+    <li><strong>Intercept</strong> = the baseline drift when every driver-change is zero — a built-in tendency the spread has on its own.</li>
+    <li><strong>Each driver has its own units</strong> (bp, $bn, etc.), so the coefficients aren't comparable head-to-head. What matters is coef × <em>how much that driver actually moved</em> — its <strong>contribution</strong>.</li>
+  </ul>
+  <div class="card idea"><div class="tag">The one mental model</div>The regression is a recipe: take how much each ingredient changed, multiply by how much that ingredient matters (its coefficient), add them all up plus a base amount (intercept), and you get the predicted move in the spread. The cockpit in Part 4 <em>is</em> this recipe, made draggable.</div>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <div class="sec-no">PART 02</div>
+  <h2>Reading the deck's actual table</h2>
+  <p class="sub">Here's the real regression output. Five columns, and once you can read them you can read any model like this.</p>
+
+  <table class="data">
+    <tr><th class="lbl">Driver</th><th>Coefficient</th><th>t-stat</th><th>6M change<br>(4/30→YE)</th><th>Spread<br>impact</th></tr>
+    <tr><td class="lbl">Intercept (baseline drift)</td><td>−2.20</td><td>−9.5</td><td>—</td><td class="neg">−2.2</td></tr>
+    <tr><td class="lbl">3M GC/OIS spread</td><td class="neg">−0.29</td><td>−14.6</td><td>+5</td><td class="neg">−1.4</td></tr>
+    <tr><td class="lbl">10s/30s Treasury curve</td><td class="neg">−0.417</td><td>−47.4</td><td>0</td><td>0.0</td></tr>
+    <tr><td class="lbl">%chg WAM-wtd Tsy debt</td><td class="neg">−0.32</td><td>−8.1</td><td>+14.3</td><td class="neg">−4.6</td></tr>
+    <tr><td class="lbl">VA hedging demand ($bn 20s)</td><td class="neg">−0.121</td><td>−24.1</td><td>0</td><td>0.0</td></tr>
+    <tr><td class="lbl">Fed custody holdings ($bn)</td><td class="pos">+0.049</td><td>+30.3</td><td>−120</td><td class="neg">−5.9</td></tr>
+    <tr style="border-top:2px solid var(--ink)"><td class="lbl"><b>Total predicted 6M change</b></td><td colspan="3"></td><td class="neg"><b>−14.1</b></td></tr>
+    <tr><td class="lbl">R² = 72% · Std err = 6.4bp · Current −46 → <b>projected −60</b></td><td colspan="4"></td></tr>
+    <caption>Each "spread impact" = coefficient × the assumed 6-month change. Add the impacts (−1.4 + 0 − 4.6 + 0 − 5.9) and the intercept (−2.2) → −14.1bp. Start from the current −46bp and you land at the projected −60bp. That single sum is the model's forecast.</caption>
+  </table>
+
+  <ul class="clean">
+    <li><strong>Coefficient</strong> — the sensitivity (covered above). Four are negative, one positive.</li>
+    <li><strong>t-stat</strong> — how sure we are the relationship is real, not luck. Rule of thumb: <code>|t| &gt; 2</code> = trustworthy. These run from 8 to 47 — <em>enormous</em> confidence. (More in Part 5.)</li>
+    <li><strong>6M change</strong> — the analyst's assumed move in each driver from late April to year-end 2020.</li>
+    <li><strong>Spread impact</strong> — coef × that change. This is the column that actually drives the forecast.</li>
+  </ul>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <div class="sec-no">PART 03 · the heart</div>
+  <h2>The five drivers, and <em>why</em> each one pushes</h2>
+  <p class="sub">A coefficient with no story is just a number. Here's the economic chain behind each — the part that gives you real understanding. The chain that matters runs: a force makes Treasuries cheaper or richer → that changes (swap rate − Treasury yield).</p>
+
+  <div class="warnbox card"><div class="tag">The master reflex</div>The spread is <code>swap − Treasury</code>. So anything that makes <strong>Treasuries cheaper</strong> (yields up) pushes the spread <span class="n-t">more negative (narrows)</span>. Anything that makes <strong>Treasuries richer</strong> (yields down) pushes it <span class="w-t">less negative (widens)</span>. Every driver below is just a different reason Treasuries get cheaper or richer.</div>
+
+  <div class="driver narrowing">
+    <div class="dh"><h4>1 · Treasury supply — %chg WAM-weighted debt</h4><span class="coef neg">coef −0.32</span></div>
+    <div class="unit">unit: growth in (debt × its maturity) — i.e. total <em>duration</em> being issued</div>
+    <p style="margin:6px 0">When the government runs a huge deficit it floods the market with bonds. WAM-weighting (debt × maturity) captures not just <em>how much</em> but <em>how long</em> — long bonds carry more duration to digest. More supply than buyers want → bond prices fall → yields rise.</p>
+    <div class="chain">more Treasury supply <span class="ar">→</span> market must absorb it <span class="ar">→</span> Treasuries <span class="hi">cheapen</span> (yields ↑) <span class="ar">→</span> (swap − Tsy) <span class="ar">↓</span> <span class="hi">narrows</span></div>
+    <div class="impact2020"><b>2020:</b> a record deficit meant debt growth of +14.3, the single biggest <span class="n-t">narrowing</span> push: −0.32 × 14.3 = <b>−4.6bp</b>.</div>
+  </div>
+
+  <div class="driver widening">
+    <div class="dh"><h4>2 · Foreign demand — Fed custody holdings</h4><span class="coef pos">coef +0.049</span></div>
+    <div class="unit">unit: $bn of Treasuries the Fed safekeeps for foreign central banks (a proxy for foreign official demand)</div>
+    <p style="margin:6px 0">Foreign central banks park their Treasuries in a custody account at the Fed. When that balance <em>rises</em>, foreigners are <em>buying</em> Treasuries — strong demand richens them. This is the one driver with a <span class="w-t">positive</span> coefficient: more demand → richer Treasuries → wider (less negative) spread.</p>
+    <div class="chain">foreign demand ↑ (custody ↑) <span class="ar">→</span> Treasuries <span class="hi">richen</span> (yields ↓) <span class="ar">→</span> (swap − Tsy) <span class="ar">↑</span> <span class="hi">widens</span></div>
+    <div class="impact2020"><b>2020:</b> custody was expected to <em>fall</em> by 120 — foreign demand fading. A falling positive-coef driver <span class="n-t">narrows</span> the spread: +0.049 × (−120) = <b>−5.9bp</b>, the biggest single push.</div>
+  </div>
+
+  <div class="driver narrowing">
+    <div class="dh"><h4>3 · Funding stress — 3M GC/OIS spread</h4><span class="coef neg">coef −0.29</span></div>
+    <div class="unit">unit: bp premium of secured repo funding (GC) over the risk-free overnight rate (OIS)</div>
+    <p style="margin:6px 0">GC/OIS measures how expensive it is to <em>finance</em> a Treasury in the repo market. When it widens, holding Treasuries costs more, so investors demand a higher yield to bother — Treasuries cheapen. It's a real-time gauge of plumbing stress.</p>
+    <div class="chain">repo funding dearer (GC/OIS ↑) <span class="ar">→</span> costlier to hold Treasuries <span class="ar">→</span> Treasuries <span class="hi">cheapen</span> <span class="ar">→</span> spread <span class="hi">narrows</span></div>
+    <div class="impact2020"><b>2020:</b> a modest +5 widening assumed → −0.29 × 5 = <b>−1.4bp</b>.</div>
+  </div>
+
+  <div class="driver narrowing">
+    <div class="dh"><h4>4 · Insurer hedging — VA hedging demand</h4><span class="coef neg">coef −0.121</span></div>
+    <div class="unit">unit: $bn of 20Y-equivalent duration that variable-annuity books need to hedge</div>
+    <p style="margin:6px 0">Insurers who sold variable annuities have long-dated guarantees to hedge. They do it by <em>receiving fixed</em> in long swaps to add duration. More VA hedging demand = more receiving = it pushes the <em>swap rate</em> down (not the Treasury), so the spread narrows. This is a pure "structural receiver" force.</p>
+    <div class="chain">more VA hedging <span class="ar">→</span> insurers <span class="hi">receive fixed</span> in swaps <span class="ar">→</span> swap rate ↓ <span class="ar">→</span> (swap − Tsy) <span class="ar">↓</span> <span class="hi">narrows</span></div>
+    <div class="impact2020"><b>2020:</b> assumed unchanged (0) → 0.0bp this time, but a powerful lever when it moves.</div>
+  </div>
+
+  <div class="driver narrowing">
+    <div class="dh"><h4>5 · Curve shape — 10s/30s Treasury curve</h4><span class="coef neg">coef −0.417</span></div>
+    <div class="unit">unit: bp slope of the Treasury curve (30Y yield − 10Y yield)</div>
+    <p style="margin:6px 0">This is partly a <em>control</em> variable: the long end of the Treasury curve and the 30Y spread tend to move together because both reflect long-end supply and duration pressure. When the curve steepens (the 30Y point cheapens relative to 10Y), 30Y spreads narrow alongside. Its t-stat (−47) is the largest — the tightest relationship in the model.</p>
+    <div class="chain">Treasury curve steepens (30Y cheapens) <span class="ar">→</span> 30Y underperforms swaps <span class="ar">→</span> spread <span class="hi">narrows</span></div>
+    <div class="impact2020"><b>2020:</b> assumed unchanged (0) → 0.0bp, but it absorbs a lot of the co-movement that would otherwise look like noise.</div>
+  </div>
+</section>
+
+<!-- 4 COCKPIT -->
+<section id="s4">
+  <div class="sec-no">PART 04 · hands-on</div>
+  <h2>The cockpit — rebuild the forecast</h2>
+  <p class="sub">Drag each driver's 6-month change. The waterfall shows how the intercept and the five contributions stack from today's −46bp down to the projected level. Hit "the deck's 2020 scenario" to reproduce −60 exactly.</p>
+
+  <div class="lab">
+    <h3>30Y swap-spread forecast engine</h3>
+    <p class="labsub">predicted change = intercept + Σ (coefficient × your driver change) &nbsp;·&nbsp; projected level = −46 + predicted change</p>
+    <div class="lab-grid">
+      <div id="sliders"></div>
+      <div>
+        <canvas id="wf" width="520" height="380" aria-label="Waterfall of driver contributions to the swap spread"></canvas>
+        <div class="bignum">
+          <div><div class="lab2">Projected 30Y spread</div><span class="val" id="proj">−60 bp</span></div>
+          <div class="chg" id="chg"></div>
+        </div>
+        <div class="presets">
+          <button data-p="deck">The deck's 2020 scenario</button>
+          <button data-p="calm">Calm (all unchanged)</button>
+          <button data-p="stress">Funding stress</button>
+          <button data-p="qe">Fed QE wave</button>
+        </div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--ink-faint)">Notice the two big narrowing bars are <b>debt growth</b> and <b>falling Fed custody</b> — the 2020 story in one picture: record supply meeting fading foreign demand. Flip Fed custody positive (foreign buying) or add a QE wave and watch the spread refuse to narrow.</p>
+</section>
+
+<!-- 5 TRUST -->
+<section id="s5">
+  <div class="sec-no">PART 05</div>
+  <h2>Can you trust the model?</h2>
+  <p class="sub">Two numbers tell you how much to believe a regression: the t-stats (is each relationship real?) and R² (how much does the whole model explain?).</p>
+
+  <div class="statwrap">
+    <div class="statcard">
+      <h4>R² = 72%</h4>
+      <canvas id="r2canvas" width="300" height="170" aria-label="Scatter showing 72% explained variance"></canvas>
+      <p>Of all the wiggling in the 30Y spread, the model's five drivers explain about <b>72%</b>. The points hug the fit line but don't sit on it — the leftover <b>28%</b> is everything the model can't see (one-off flows, sentiment, noise). For a financial model, 72% is genuinely strong.</p>
+    </div>
+    <div class="statcard">
+      <h4>t-stats: 8 to 47</h4>
+      <canvas id="tcanvas" width="300" height="170" aria-label="Bar chart of t-stats versus the significance threshold"></canvas>
+      <p>A t-stat says "how many standard errors away from zero is this relationship?" Above ~2 (the dashed line) it's unlikely to be a fluke. Every driver here clears it by miles — the curve term hits 47 — so these aren't accidental correlations.</p>
+    </div>
+  </div>
+  <div class="card idea"><div class="tag">What "std err = 6.4bp" means</div>It's the typical size of the model's <em>miss</em>. So the −60 projection is really "−60, give or take ~6bp." Useful for direction and rough magnitude — not a to-the-basis-point guarantee.</div>
+</section>
+
+<!-- 6 CAVEATS -->
+<section id="s6">
+  <div class="sec-no">PART 06</div>
+  <h2>The honest caveats</h2>
+  <p class="sub">A good analyst trusts this model <em>and</em> knows exactly where it can mislead. Four things to hold in mind.</p>
+  <ul class="clean">
+    <li><strong>Changes, not levels.</strong> The model regresses 6-month <em>changes</em> against <em>changes</em>, not levels against levels. Spread levels drift over time, and regressing drifting things on each other invents fake correlations ("spurious regression"). Differencing strips the drift out — a deliberate, important choice.</li>
+    <li><strong>Correlation isn't causation.</strong> The curve term especially is a co-mover/control, not a clean cause. The model captures <em>relationships</em>, which is enough to forecast — but don't over-read any single coefficient as a lever you could pull in isolation.</li>
+    <li><strong>It's fit on the past.</strong> Coefficients are averages over a 10-year window. In a genuine regime shift (a new Fed reaction function, a funding crisis), the relationships can change and the model degrades until it re-learns.</li>
+    <li><strong>The forecast is conditional.</strong> −60 only follows <em>if</em> the assumed driver changes happen. The deck itself hedges: "barring a significant acceleration in Fed purchases." The drivers can surprise — which is exactly why the cockpit lets you test other scenarios.</li>
+  </ul>
+  <div class="card warnbox"><div class="tag">The right way to use it</div>Treat the output as a <em>disciplined anchor</em>: "given these supply and demand assumptions, fair value for the 30Y spread is around −60." If the market sits far from that, either the market is wrong (an opportunity) or your driver assumptions are (update them). The model organizes the debate; it doesn't end it.</div>
+</section>
+
+<!-- 7 RECAP -->
+<section id="s7">
+  <div class="sec-no">PART 07</div>
+  <h2>Recap &amp; self-test</h2>
+  <ul class="clean">
+    <li>A regression learns one <strong>coefficient</strong> per driver: how much the spread moves per unit of that driver. Forecast = intercept + Σ(coef × change).</li>
+    <li>The master reflex: anything that <strong>cheapens Treasuries narrows</strong> the spread (more negative); anything that <strong>richens them widens</strong> it.</li>
+    <li><strong>Supply</strong> (debt growth) and <strong>fading foreign demand</strong> (Fed custody falling) were the two big narrowing forces into year-end 2020.</li>
+    <li><strong>Fed custody</strong> is the lone positive coefficient — more foreign buying = richer Treasuries = wider spread.</li>
+    <li><strong>R² 72%</strong> = strong explanatory power; huge <strong>t-stats</strong> = real relationships; <strong>±6bp</strong> typical miss.</li>
+    <li>Trust it as an anchor, not an oracle — it's changes-based, fit on the past, and conditional on your assumptions.</li>
+  </ul>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<footer><div class="wrap">
+  <p>A deep-dive companion to the swap-spread driver regression in <em>“Introduction to swaps and drivers of swap spreads,”</em> J.P. Morgan, September 2020. Coefficients, t-stats, and the 4/30→year-end scenario are from that deck's Exhibit.</p>
+  <p class="disc"><strong>Not investment advice.</strong> Educational explainer of a published research model. The cockpit reproduces the deck's linear model with its stated coefficients; real forecasting involves more nuance than any single regression.</p>
+</div></footer>
+</main>
+
+<script>
+/* progress + nav */
+const prog=document.getElementById('progress'); const navLinks=[...document.querySelectorAll('#topnav a')]; const secs=[...document.querySelectorAll('section')];
+function onScroll(){ const h=document.documentElement; prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+  let cur=secs[0].id; for(const s of secs){ if(s.getBoundingClientRect().top<120) cur=s.id; } navLinks.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+cur)); }
+document.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+
+/* ===== COCKPIT ===== */
+(function(){
+  const intercept=-2.20, current=-46;
+  const drivers=[
+    {id:'gc',  name:'GC/OIS spread',     coef:-0.29,  unit:'bp', min:-20, max:30,  def:5,    step:1},
+    {id:'crv', name:'10s/30s curve',     coef:-0.417, unit:'bp', min:-30, max:30,  def:0,    step:1},
+    {id:'debt',name:'Tsy debt growth',   coef:-0.32,  unit:'idx',min:-10, max:30,  def:14.3, step:0.5},
+    {id:'va',  name:'VA hedging demand', coef:-0.121, unit:'$bn',min:-60, max:60,  def:0,    step:1},
+    {id:'fed', name:'Fed custody hldgs', coef:0.049,  unit:'$bn',min:-300,max:150, def:-120, step:5}
+  ];
+  const presets={
+    deck:[5,0,14.3,0,-120], calm:[0,0,0,0,0], stress:[25,8,14.3,0,-120], qe:[-5,-5,14.3,0,150]
+  };
+  const slidersEl=document.getElementById('sliders');
+  drivers.forEach(d=>{
+    const row=document.createElement('div'); row.className='slider-row';
+    row.innerHTML='<div class="top"><span class="nm">'+d.name+' <span class="cf">· coef '+(d.coef>0?'+':'')+d.coef+'</span></span><span class="delta" id="'+d.id+'_d">'+fmtd(d.def)+' '+d.unit+'</span></div>'+
+      '<input type="range" id="'+d.id+'" min="'+d.min+'" max="'+d.max+'" step="'+d.step+'" value="'+d.def+'">'+
+      '<div class="impact" id="'+d.id+'_i"></div>';
+    slidersEl.appendChild(row);
+  });
+  function fmtd(v){ return (v>0?'+':'')+(Math.round(v*10)/10); }
+  function fmtbp(v){ return (v>=0?'+':'−')+Math.abs(Math.round(v*10)/10); }
+
+  const cv=document.getElementById('wf'), ctx=cv.getContext('2d');
+  const projEl=document.getElementById('proj'), chgEl=document.getElementById('chg'), verdict=document.getElementById('verdict');
+
+  function vals(){ return drivers.map(d=>+document.getElementById(d.id).value); }
+
+  function compute(){
+    const v=vals();
+    const contribs=drivers.map((d,i)=>d.coef*v[i]);
+    const totalDelta=intercept+contribs.reduce((a,b)=>a+b,0);
+    const projected=current+totalDelta;
+    return {v,contribs,totalDelta,projected};
+  }
+
+  function fit(){ const r=cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; cv.width=r.width*dpr; cv.height=(r.width*0.73)*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); cv.style.height=(r.width*0.73)+'px'; }
+
+  function draw(){
+    const {v,contribs,totalDelta,projected}=compute();
+    // update slider readouts
+    drivers.forEach((d,i)=>{
+      document.getElementById(d.id+'_d').textContent=fmtd(v[i])+' '+d.unit;
+      const imp=contribs[i]; const el=document.getElementById(d.id+'_i');
+      el.innerHTML='contribution: <span class="'+(imp<=0?'imp-narrow':'imp-widen')+'">'+fmtbp(imp)+' bp '+(imp<0?'(narrows)':imp>0?'(widens)':'')+'</span>';
+    });
+    // waterfall steps: current, +intercept, +5 contribs, projected
+    const stepLabels=['Now','Int','GC','Crv','Debt','VA','Fed'];
+    const deltas=[intercept,contribs[0],contribs[1],contribs[2],contribs[3],contribs[4]];
+    let run=current; const levels=[current];
+    deltas.forEach(dd=>{ run+=dd; levels.push(run); });
+    // levels has 7 entries: index0=current ... index6=projected
+    const Wc=cv.clientWidth, Hc=cv.clientWidth*0.73, padL=40,padR=14,padT=18,padB=34;
+    const plotW=Wc-padL-padR, plotH=Hc-padT-padB;
+    let lo=Math.min(...levels), hi=Math.max(...levels); const pad=Math.max((hi-lo)*0.18,3); lo-=pad; hi+=pad;
+    const ncol=7; const colX=i=>padL + (plotW/(ncol))*(i+0.5);
+    const Y=L=>padT + (hi-L)/(hi-lo)*plotH;
+    const barW=Math.min(30, plotW/ncol*0.6);
+
+    ctx.clearRect(0,0,Wc,Hc);
+    // gridlines every 5bp
+    ctx.strokeStyle='#23262F'; ctx.fillStyle='#6A6757'; ctx.font='10px IBM Plex Mono'; ctx.lineWidth=1;
+    const g0=Math.ceil(lo/5)*5;
+    for(let g=g0; g<=hi; g+=5){ ctx.beginPath(); ctx.moveTo(padL,Y(g)); ctx.lineTo(padL+plotW,Y(g)); ctx.stroke(); ctx.fillText(g, 6, Y(g)+3); }
+
+    // current marker (column 0)
+    function marker(i,L,color,label){ const x=colX(i);
+      ctx.strokeStyle=color; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(padL,Y(L)); ctx.lineTo(padL+plotW,Y(L)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,Y(L),5,0,7); ctx.fill();
+      ctx.fillText(label, x-14, Y(L)-9); }
+
+    // waterfall bars columns 1..6 (deltas) spanning levels[i-1]->levels[i]
+    for(let i=1;i<=6;i++){
+      const a=levels[i-1], b=levels[i]; const x=colX(i);
+      const narrowing = b<a; // more negative
+      const color = narrowing ? '#3C8C63' : '#C28A3A';
+      const y1=Y(a), y2=Y(b);
+      ctx.fillStyle=color; ctx.globalAlpha=.85;
+      ctx.fillRect(x-barW/2, Math.min(y1,y2), barW, Math.max(2,Math.abs(y2-y1))); ctx.globalAlpha=1;
+      // connector from previous column level a
+      ctx.strokeStyle='#4A4E59'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(colX(i-1)+ (i-1===0?5:barW/2), Y(a)); ctx.lineTo(x-barW/2, Y(a)); ctx.stroke();
+      // delta value above/below bar
+      const dval=b-a; ctx.fillStyle=color; ctx.font='10px IBM Plex Mono';
+      const ty = (dval<0)? Math.max(y1,y2)+12 : Math.min(y1,y2)-5;
+      ctx.fillText(fmtbp(dval), x-12, ty);
+    }
+    // markers for current and projected
+    marker(0,current,'#9DB0C4','now '+Math.round(current));
+    // projected dashed at last column
+    const x7=colX(6);
+    ctx.strokeStyle='#79C79C'; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(padL,Y(projected)); ctx.lineTo(padL+plotW,Y(projected)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#79C79C'; ctx.beginPath(); ctx.arc(x7,Y(projected),5,0,7); ctx.fill();
+
+    // x labels
+    ctx.fillStyle='#6A6757'; ctx.font='10px IBM Plex Mono';
+    stepLabels.forEach((l,i)=>{ ctx.fillText(l, colX(i)-l.length*3, padT+plotH+16); });
+
+    // readouts
+    projEl.textContent=Math.round(projected)+' bp'; projEl.style.color = projected<current?'#79C79C':'#E0A867';
+    chgEl.innerHTML = (totalDelta<0?'<span style="color:#79C79C">':'<span style="color:#E0A867">')+fmtbp(totalDelta)+' bp from −46</span>';
+    verdict.innerHTML = totalDelta<0
+      ? 'Net <b style="color:#79C79C">narrowing</b> of '+Math.abs(Math.round(totalDelta))+'bp → spread heads to '+Math.round(projected)+'bp. The contributions below show which forces are doing the work.'
+      : 'Net <b style="color:#E0A867">widening</b> of '+Math.round(totalDelta)+'bp → spread moves back toward zero, to '+Math.round(projected)+'bp.';
+  }
+  function redraw(){ fit(); draw(); }
+  drivers.forEach(d=>document.getElementById(d.id).addEventListener('input',draw));
+  document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('click',()=>{
+    const p=presets[b.dataset.p]; if(!p)return; drivers.forEach((d,i)=>document.getElementById(d.id).value=p[i]); draw();
+  }));
+  window.addEventListener('resize',redraw);
+  redraw(); setTimeout(redraw,400); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(redraw);
+})();
+
+/* ===== R2 scatter ===== */
+(function(){
+  const cv=document.getElementById('r2canvas'); if(!cv) return; const ctx=cv.getContext('2d');
+  function fit(){ const r=cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; cv.width=r.width*dpr; cv.height=170*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); cv.style.height='170px'; }
+  function draw(){
+    const W=cv.clientWidth,H=170,p=18; ctx.clearRect(0,0,W,H);
+    // diagonal fit line
+    ctx.strokeStyle='#3C8C63'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(p,H-p); ctx.lineTo(W-p,p); ctx.stroke();
+    // points hugging line, r≈0.85 (R²≈0.72)
+    let seed=7; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
+    ctx.fillStyle='#9DB0C4';
+    for(let i=0;i<46;i++){ const t=rnd(); const x=p+t*(W-2*p); const yline=(H-p)-t*(H-2*p);
+      const noise=(rnd()-0.5)*46; const y=Math.max(p,Math.min(H-p,yline+noise));
+      ctx.beginPath(); ctx.arc(x,y,2.6,0,7); ctx.fill(); }
+    ctx.fillStyle='#6A6757'; ctx.font='10px IBM Plex Mono'; ctx.fillText('predicted →', W-78, H-6); 
+  }
+  function rd(){ fit(); draw(); } window.addEventListener('resize',rd); rd(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(rd);
+})();
+
+/* ===== t-stat bars ===== */
+(function(){
+  const cv=document.getElementById('tcanvas'); if(!cv) return; const ctx=cv.getContext('2d');
+  const data=[['GC',14.6],['Crv',47.4],['Debt',8.1],['VA',24.1],['Fed',30.3]];
+  function fit(){ const r=cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; cv.width=r.width*dpr; cv.height=170*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); cv.style.height='170px'; }
+  function draw(){
+    const W=cv.clientWidth,H=170,p=22; ctx.clearRect(0,0,W,H);
+    const maxT=50; const Y=t=>(H-p)-(t/maxT)*(H-2*p); const bw=(W-2*p)/data.length*0.6;
+    // threshold line at 2
+    ctx.strokeStyle='#C28A3A'; ctx.setLineDash([4,3]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(p,Y(2)); ctx.lineTo(W-p,Y(2)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#C28A3A'; ctx.font='10px IBM Plex Mono'; ctx.fillText('t = 2 (significance)', p, Y(2)-4);
+    data.forEach((d,i)=>{ const x=p+(W-2*p)*(i+0.5)/data.length; ctx.fillStyle='#3C8C63';
+      ctx.fillRect(x-bw/2, Y(d[1]), bw, (H-p)-Y(d[1]));
+      ctx.fillStyle='#6A6757'; ctx.font='9px IBM Plex Mono'; ctx.fillText(d[0], x-d[0].length*2.7, H-p+12); });
+  }
+  function rd(){ fit(); draw(); } window.addEventListener('resize',rd); rd(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(rd);
+})();
+
+/* ===== quiz ===== */
+(function(){
+  const data=[
+    {q:'The Treasury floods the market with new long-dated bonds. What happens to the 30Y swap spread?',
+     opts:['Widens — Treasuries richen','Narrows — more supply cheapens Treasuries, so (swap − Tsy) falls','Nothing — supply is irrelevant','Depends on the Fed only'],correct:1,
+     why:'More supply than demand pushes Treasury prices down / yields up. Since the spread is swap − Treasury, cheaper Treasuries pull it more negative. That is why the debt-growth coefficient is negative (−0.32) and was the second-biggest narrowing force in 2020.'},
+    {q:'Fed custody holdings have a POSITIVE coefficient (+0.049). Yet in 2020 they contributed −5.9bp (narrowing). How?',
+     opts:['The coefficient is wrong','Custody was expected to FALL by 120; a positive coef × a negative change = a negative contribution','Positive coefficients always narrow','It was a rounding error'],correct:1,
+     why:'Contribution = coefficient × change. +0.049 × (−120) = −5.9. Falling foreign demand (custody down) cheapens Treasuries → narrows the spread. The coefficient sign and the contribution sign are different things.'},
+    {q:'A driver has a t-stat of 47. What does that tell you?',
+     opts:['Its coefficient is huge','The relationship is extremely unlikely to be random noise — highly significant','It explains 47% of the spread','It widens the spread by 47bp'],correct:1,
+     why:'The t-stat measures how many standard errors the relationship sits from zero. Anything above ~2 is statistically significant; 47 is overwhelming evidence the relationship is real. It says nothing about size (that is the coefficient) or total fit (that is R²).'},
+    {q:'R² is 72%. What is the other 28%?',
+     opts:['A second model','Everything the five drivers do NOT capture — other flows, sentiment, noise','The intercept','Measurement error in the spread'],correct:1,
+     why:'R² is the share of the spread\'s variation the model explains. 28% is left to factors outside the model. 72% is strong for finance, but it is why the projection is an anchor (±~6bp std error), not a guarantee.'}
+  ];
+  const root=document.getElementById('quiz');
+  data.forEach((item,i)=>{ const box=document.createElement('div'); box.style.marginBottom='22px';
+    const q=document.createElement('div'); q.className='q'; q.textContent=(i+1)+'. '+item.q; box.appendChild(q);
+    const ex=document.createElement('div'); ex.className='explain'; ex.textContent=item.why;
+    item.opts.forEach((o,j)=>{ const b=document.createElement('button'); b.className='opt'; b.textContent=o;
+      b.addEventListener('click',()=>{ [...box.querySelectorAll('.opt')].forEach(x=>x.disabled=true);
+        b.classList.add(j===item.correct?'correct':'wrong'); if(j!==item.correct) box.querySelectorAll('.opt')[item.correct].classList.add('correct'); ex.classList.add('show'); });
+      box.appendChild(b); });
+    box.appendChild(ex); root.appendChild(box); });
+})();
+</script>
+</body>
+</html>

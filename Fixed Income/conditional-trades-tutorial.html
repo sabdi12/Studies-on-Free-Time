@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conditional Trades — a deep-dive notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF2F7;
+    --paper-2:#F7F9FC;
+    --ink:#15202E;
+    --ink-soft:#3C4A5A;
+    --ink-faint:#7C8B9C;
+    --grid:#D3DCE6;
+    --grid-strong:#C2CDD9;
+    --line:#9DAAB8;
+    /* long leg / weighted strategy / "go" */
+    --long:#2356C7;
+    --long-soft:#E3ECFB;
+    /* short leg / strike-shift strategy / risk */
+    --short:#C25A33;
+    --short-soft:#F8E9E1;
+    --good:#1E7A52;
+    --warn:#B07A12;
+    --maxw:980px;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    /* graph-paper signature texture */
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      linear-gradient(var(--grid-strong) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-strong) 1px, transparent 1px);
+    background-size: 26px 26px, 26px 26px, 130px 130px, 130px 130px;
+    color:var(--ink);
+    font-family:"Inter", system-ui, -apple-system, sans-serif;
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px;}
+
+  /* ---------- top bar / progress ---------- */
+  #progress{position:fixed; top:0; left:0; height:3px; width:0%; background:var(--long); z-index:50; transition:width .1s linear;}
+  #topnav{position:sticky; top:0; z-index:40; background:rgba(238,242,247,.86); backdrop-filter:blur(7px); border-bottom:1px solid var(--grid-strong);}
+  #topnav .wrap{display:flex; align-items:center; gap:14px; height:52px; overflow-x:auto; scrollbar-width:none;}
+  #topnav .wrap::-webkit-scrollbar{display:none;}
+  #topnav .brand{font-family:"Space Grotesk"; font-weight:700; letter-spacing:-.01em; white-space:nowrap; font-size:15px;}
+  #topnav a{color:var(--ink-soft); text-decoration:none; font-size:12.5px; font-family:"IBM Plex Mono"; white-space:nowrap; padding:3px 0; border-bottom:2px solid transparent;}
+  #topnav a:hover{color:var(--long);}
+  #topnav a.active{color:var(--ink); border-bottom-color:var(--short);}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:78px 0 40px;}
+  .eyebrow{font-family:"IBM Plex Mono"; font-size:12.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--short); margin-bottom:18px;}
+  h1{font-family:"Space Grotesk"; font-weight:700; font-size:clamp(38px,7vw,68px); line-height:1.02; letter-spacing:-.025em; margin:0 0 18px;}
+  h1 .lo{color:var(--long);} h1 .hi{color:var(--short);}
+  .dek{font-size:20px; color:var(--ink-soft); max-width:680px; margin:0 0 26px;}
+  .note{background:var(--paper-2); border:1px solid var(--grid-strong); border-left:3px solid var(--long); padding:16px 20px; border-radius:var(--radius); max-width:680px; font-size:15.5px; color:var(--ink-soft);}
+  .note b{color:var(--ink);}
+
+  /* ---------- sections ---------- */
+  section{padding:46px 0; border-top:1px solid var(--grid-strong);}
+  .sec-no{font-family:"IBM Plex Mono"; font-size:13px; color:var(--short); letter-spacing:.1em;}
+  h2{font-family:"Space Grotesk"; font-weight:700; font-size:clamp(26px,4.5vw,38px); line-height:1.08; letter-spacing:-.02em; margin:6px 0 8px;}
+  .sub{color:var(--ink-faint); font-size:15px; margin:0 0 26px; max-width:680px;}
+  h3{font-family:"Space Grotesk"; font-weight:600; font-size:21px; letter-spacing:-.01em; margin:34px 0 8px; color:var(--ink);}
+  p{margin:0 0 16px; max-width:720px;}
+  .lead{font-size:18.5px;}
+  strong{color:var(--ink); font-weight:600;}
+  em{color:var(--ink); font-style:italic;}
+  .long-t{color:var(--long); font-weight:600;}
+  .short-t{color:var(--short); font-weight:600;}
+  a.inline{color:var(--long);}
+
+  ul.clean{max-width:720px; padding-left:0; list-style:none; margin:0 0 16px;}
+  ul.clean li{position:relative; padding-left:26px; margin-bottom:11px;}
+  ul.clean li::before{content:"›"; position:absolute; left:6px; top:-1px; color:var(--short); font-family:"IBM Plex Mono"; font-weight:600;}
+
+  /* callouts */
+  .card{background:var(--paper-2); border:1px solid var(--grid-strong); border-radius:var(--radius); padding:20px 22px; margin:22px 0; max-width:740px;}
+  .card .tag{font-family:"IBM Plex Mono"; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px;}
+  .why{border-left:3px solid var(--short);}
+  .key{border-left:3px solid var(--long); background:linear-gradient(180deg,#fff,var(--paper-2));}
+  .intuition{background:#FBFCEF; border:1px solid #E7E6C2; border-left:3px solid var(--warn);}
+
+  /* equations */
+  .eq{font-family:"IBM Plex Mono"; background:#11202F; color:#E7EEF6; padding:14px 18px; border-radius:var(--radius); margin:16px 0; max-width:740px; overflow-x:auto; font-size:15px; line-height:1.8;}
+  .eq .v{color:#7FB0FF;} .eq .o{color:#E59B6E;} .eq .c{color:#7C8B9C;}
+  .inlmono{font-family:"IBM Plex Mono"; background:var(--paper-2); border:1px solid var(--grid-strong); padding:1px 6px; border-radius:3px; font-size:14.5px;}
+
+  /* data tables */
+  table.data{border-collapse:collapse; width:100%; max-width:740px; margin:18px 0; font-family:"IBM Plex Mono"; font-size:14px; background:var(--paper-2);}
+  table.data th, table.data td{border:1px solid var(--grid-strong); padding:8px 11px; text-align:right;}
+  table.data th{background:#E7EDF4; font-weight:600; color:var(--ink);}
+  table.data td.lbl, table.data th.lbl{text-align:left; color:var(--ink-soft);}
+  table.data td.cL{color:var(--long); font-weight:600;}
+  table.data td.cS{color:var(--short); font-weight:600;}
+  caption{caption-side:bottom; text-align:left; font-family:"Inter"; font-size:12.5px; color:var(--ink-faint); padding-top:8px; max-width:740px;}
+
+  /* scenario walk */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:740px; margin:18px 0;}
+  .quad{border:1px solid var(--grid-strong); border-radius:var(--radius); padding:14px 16px; background:var(--paper-2);}
+  .quad h4{margin:0 0 4px; font-family:"Space Grotesk"; font-size:15px;}
+  .quad p{font-size:13.5px; margin:0; color:var(--ink-soft);}
+  .quad.win{border-left:3px solid var(--good);} .quad.flat{border-left:3px solid var(--ink-faint);}
+  .quad.win h4{color:var(--good);}
+
+  /* ---------- interactive lab ---------- */
+  .lab{background:#11202F; color:#E7EEF6; border-radius:8px; padding:24px; margin:26px 0; max-width:880px;}
+  .lab h3{color:#fff; margin-top:0;}
+  .lab .labsub{color:#9DB0C4; font-size:14px; margin-bottom:18px; max-width:none;}
+  .lab-grid{display:grid; grid-template-columns:1.25fr 1fr; gap:22px;}
+  @media(max-width:760px){ .lab-grid{grid-template-columns:1fr;} .grid2{grid-template-columns:1fr;} }
+  canvas{width:100%; height:auto; background:#0C1925; border-radius:6px; border:1px solid #1F3550;}
+  .controls label{display:block; font-family:"IBM Plex Mono"; font-size:12.5px; color:#9DB0C4; margin:16px 0 4px; display:flex; justify-content:space-between;}
+  .controls label span.val{color:#7FB0FF;}
+  input[type=range]{width:100%; accent-color:#3C7BE0; cursor:pointer;}
+  .presets{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 4px;}
+  .presets button{flex:1 1 auto; background:#1B3148; color:#CFE0F2; border:1px solid #2B4763; border-radius:5px; padding:8px 6px; font-family:"IBM Plex Mono"; font-size:11.5px; cursor:pointer; transition:.15s;}
+  .presets button:hover{background:#244463;}
+  .readout{margin-top:20px; border-top:1px solid #1F3550; padding-top:16px; font-family:"IBM Plex Mono"; font-size:13.5px;}
+  .readout .row{display:flex; justify-content:space-between; padding:4px 0;}
+  .readout .row b{font-weight:600;}
+  .dotL{color:#5C93EE;} .dotS{color:#E59B6E;}
+  .verdict{margin-top:14px; padding:12px 14px; background:#0C1925; border-radius:6px; font-size:13px; line-height:1.6; color:#CFE0F2; border:1px solid #1F3550;}
+
+  /* small calculators (light) */
+  .calc{background:var(--paper-2); border:1px solid var(--grid-strong); border-radius:8px; padding:22px; margin:24px 0; max-width:740px;}
+  .calc h3{margin-top:0;}
+  .calc-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:10px 0;}
+  .calc-row label{font-size:13.5px; color:var(--ink-soft); min-width:240px; font-family:"IBM Plex Mono"; font-size:13px;}
+  .calc-row input[type=range]{flex:1; min-width:160px; accent-color:var(--long);}
+  .calc-row .v{font-family:"IBM Plex Mono"; color:var(--long); min-width:64px; text-align:right; font-weight:600;}
+  .calc-out{margin-top:16px; border-top:1px dashed var(--grid-strong); padding-top:14px; font-family:"IBM Plex Mono"; font-size:14px;}
+  .calc-out .big{font-size:18px; font-weight:600;}
+  .pill{display:inline-block; padding:2px 9px; border-radius:20px; font-size:12px; font-family:"IBM Plex Mono"; font-weight:600;}
+  .pill.go{background:var(--long-soft); color:var(--long);}
+  .pill.no{background:var(--short-soft); color:var(--short);}
+
+  /* quiz */
+  .quiz{border:1px solid var(--grid-strong); border-radius:8px; background:var(--paper-2); padding:20px 22px; margin:20px 0; max-width:740px;}
+  .quiz .q{font-weight:600; margin-bottom:12px;}
+  .quiz button.opt{display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--grid-strong); border-radius:5px; padding:11px 14px; margin-bottom:8px; cursor:pointer; font-size:14.5px; font-family:"Inter"; transition:.12s;}
+  .quiz button.opt:hover{border-color:var(--long);}
+  .quiz button.opt.correct{background:#E4F3EB; border-color:var(--good); color:var(--good);}
+  .quiz button.opt.wrong{background:var(--short-soft); border-color:var(--short); color:var(--short);}
+  .quiz .explain{display:none; margin-top:10px; font-size:14px; color:var(--ink-soft); border-left:3px solid var(--good); padding-left:12px;}
+  .quiz .explain.show{display:block;}
+
+  footer{padding:50px 0 70px; border-top:1px solid var(--grid-strong); color:var(--ink-faint); font-size:13.5px;}
+  footer a{color:var(--long);}
+  .disc{font-size:12px; color:var(--ink-faint); margin-top:14px; max-width:740px;}
+
+  @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto; transition:none!important;} }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="topnav"><div class="wrap">
+  <span class="brand">Conditional&nbsp;Trades</span>
+  <a href="#s1">1·Blocks</a>
+  <a href="#s2">2·Swaptions</a>
+  <a href="#s3">3·The idea</a>
+  <a href="#s4">4·Directionality</a>
+  <a href="#s5">5·Zero cost</a>
+  <a href="#s6">6·Simulator</a>
+  <a href="#s7">7·Extensions</a>
+  <a href="#s8">8·The proof</a>
+  <a href="#s9">9·Recap</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">A deep-dive notebook · built from the J.P. Morgan primer (May 2016)</div>
+  <h1>How to bet on the <span class="lo">curve</span><br>only when you're <span class="hi">right</span> about direction.</h1>
+  <p class="dek">A conditional trade is a yield-curve position that <em>only switches on</em> if rates move the way you predicted — and costs nothing to put on. This notebook builds the whole idea from zero, with live numbers you can poke.</p>
+  <div class="note"><b>Before we start:</b> you said you're "stupid." You're reading a J.P. Morgan rates-strategy primer and want to understand every line of it. That is not what stupid people do. We'll go slowly, define every term the first time it appears, and never wave hands. If a step feels skipped, it's a bug — but I tried hard not to leave any.</div>
+</div></header>
+
+<main class="wrap">
+
+<!-- ============ SECTION 1 ============ -->
+<section id="s1">
+  <div class="sec-no">EXHIBIT 01</div>
+  <h2>The building blocks</h2>
+  <p class="sub">Four ideas you need before anything else makes sense: a swap, the yield curve, what "steepening" means, and PVBP. We'll define each like you've never seen it.</p>
+
+  <h3>A swap, in one breath</h3>
+  <p>An <strong>interest-rate swap</strong> is a contract where two people exchange interest payments. One side pays a <em>fixed</em> rate (locked in today), the other pays a <em>floating</em> rate (resets with the market). When a trader says <span class="inlmono">"I pay 10Y swaps,"</span> they mean: <em>I agreed to pay the fixed 10-year rate.</em> If rates go up after that, paying a now-cheap fixed rate is a win — so <strong>paying fixed = betting rates go up.</strong> Receiving fixed is the opposite bet.</p>
+  <div class="card why"><div class="tag">Why this matters</div>Everything in this paper is built from "pay" and "receive." Pay = profit if yields rise. Receive = profit if yields fall. Tattoo that on your arm and the rest follows.</div>
+
+  <h3>The yield curve</h3>
+  <p>Different maturities have different rates. Plot the rate for 1Y, 2Y, 3Y … 30Y and you get the <strong>yield curve</strong>. We name a slope by its two ends. <span class="inlmono">3s/20s</span> means "the 20-year rate <em>minus</em> the 3-year rate" — the steepness between those two points, measured in <strong>basis points (bp)</strong>, where 1bp = 0.01%.</p>
+  <ul class="clean">
+    <li>The curve <strong>steepens</strong> when the long end rises relative to the short end — <span class="inlmono">3s/20s</span> gets bigger.</li>
+    <li>The curve <strong>flattens</strong> when that gap shrinks — <span class="inlmono">3s/20s</span> gets smaller.</li>
+  </ul>
+
+  <h3>Steepeners and flatteners (the outright trade)</h3>
+  <p>A <strong>3s/20s steepener</strong> profits when the curve steepens. You build it by <span class="short-t">paying the 20Y</span> (betting the long end rises) and <span class="long-t">receiving the 3Y</span> (betting the short end falls, or rises less). Whatever direction yields go, you make money <em>if the gap widens</em>. A <strong>flattener</strong> is the mirror image.</p>
+  <div class="card intuition"><div class="tag">Plain-English intuition</div>An outright steepener is a pure bet on the <em>shape</em> of the curve. It does not care whether rates went up or down — only whether the 20Y pulled away from the 3Y. That sounds great, until you realize you're also exposed when the curve does the "right" shape move for the "wrong" reason. That gap is exactly the hole conditional trades plug.</div>
+
+  <h3>PVBP — the unit of risk</h3>
+  <p><strong>PVBP</strong> (price value of a basis point; also called DV01) answers: <em>"If this swap's yield moves 1bp, how many dollars/euros do I make or lose?"</em> Longer swaps have bigger PVBP because a 1bp move compounds over more years.</p>
+  <p>From the paper's example: a 3-year swap has <span class="inlmono">PVBP = 301</span> and a 20-year swap has <span class="inlmono">PVBP = 1790</span> (per €mn). So a 20Y swap is <span class="inlmono">1790 / 301 ≈ 5.95×</span> as sensitive to a 1bp move as a 3Y swap.</p>
+  <div class="card key"><div class="tag">The risk-weighting rule</div>To make a curve trade "balanced" (a pure slope bet, neutral to parallel moves), you hold more of the less-sensitive leg. If the long leg notional is 100, the short leg notional is <span class="inlmono">100 × (PVBP<sub>L</sub>/PVBP<sub>S</sub>) = 100 × 1790/301 ≈ 595</span>. Now a 1bp move in <em>both</em> legs nets to roughly zero P&amp;L — only the <em>difference</em> (the curve) moves your book. This "595 vs 100" pairing shows up everywhere below, so remember where it came from.</div>
+</section>
+
+<!-- ============ SECTION 2 ============ -->
+<section id="s2">
+  <div class="sec-no">EXHIBIT 02</div>
+  <h2>Swaptions: turning swaps into options</h2>
+  <p class="sub">A conditional trade is built from <em>options on swaps</em>. Here's the entire vocabulary, with the one mathematical fact that makes the whole structure work.</p>
+
+  <p>A <strong>swaption</strong> is the right (not obligation) to enter a swap later, at a rate fixed today (the <strong>strike</strong>). Two flavours:</p>
+  <ul class="clean">
+    <li><span class="short-t">Payer swaption</span> — the right to <em>pay</em> fixed. It pays off if rates rise above the strike. <strong>A payer is a bet that yields go up.</strong></li>
+    <li><span class="long-t">Receiver swaption</span> — the right to <em>receive</em> fixed. It pays off if rates fall below the strike. <strong>A receiver is a bet that yields go down.</strong></li>
+  </ul>
+
+  <p>The notation <span class="inlmono">3Mx20Y</span> means: an option expiring in <strong>3 months</strong> ("3M", the expiry), on a <strong>20-year</strong> swap ("20Y", the tail).</p>
+
+  <h3>Strikes: ATMF, ITM, OTM</h3>
+  <ul class="clean">
+    <li><strong>ATMF</strong> (at-the-money-forward): the strike equals the rate the market currently expects (the <em>forward</em> rate). The standard "fair" starting point.</li>
+    <li><strong>ITM</strong> (in-the-money): the option already has value — rates have moved your way.</li>
+    <li><strong>OTM</strong> (out-of-the-money): rates must move further before it's worth anything. <em>Cheaper</em>, because it needs more help.</li>
+  </ul>
+
+  <h3>Implied volatility — priced in "bp/day"</h3>
+  <p><strong>Implied volatility (σ)</strong> is the market's price for uncertainty: how much the underlying rate is expected to wiggle. Rates desks quote it in <strong>basis points per day</strong>. In the paper's example, the 3Y option's vol is <span class="inlmono">σ<sub>S</sub> = 25.0 bp/day</span> and the 20Y option's is <span class="inlmono">σ<sub>L</sub> = 63.4 bp/day</span>. The long end is far more volatile — that asymmetry is the engine of the whole trade.</p>
+
+  <div class="card key"><div class="tag">The one fact that makes everything work</div>
+  For an <strong>ATMF</strong> option, the premium (its cost) is almost exactly <em>linear in volatility</em>:
+  <div class="eq">P<sub>option</sub> &nbsp;=&nbsp; <span class="v">σ</span> <span class="o">×</span> PVBP <span class="o">×</span> √( T / (2<span class="o">π</span>) ) &nbsp;&nbsp;<span class="c">// price as % of notional</span></div>
+  Read it slowly: cost goes <strong>up</strong> with volatility (σ), <strong>up</strong> with sensitivity (PVBP), and <strong>up</strong> with the square root of time to expiry (T). Because the relationship with σ is a straight multiply, you can perfectly cancel two ATMF premiums by adjusting either σ-driven price <em>or</em> notional. Hold this thought for Section 5 — it's why "premium neutral at zero cost" is even possible.</div>
+
+  <p><strong>Delta (δ)</strong> and <strong>gamma (Γ)</strong> round out the toolkit: delta is how fast the option's value changes as the rate moves; gamma is how fast the delta itself changes. They appear once, in the strike-shift formula, and we'll explain them right there.</p>
+</section>
+
+<!-- ============ SECTION 3 ============ -->
+<section id="s3">
+  <div class="sec-no">EXHIBIT 03</div>
+  <h2>The conditional idea</h2>
+  <p class="sub">Now we can state the actual trick — and see exactly when it pays and when it quietly expires worthless.</p>
+
+  <p>Here's the observation the whole paper rests on. In Europe, with the central bank's policy rate pinned down, <strong>the curve has been "directional" with the level of yields</strong>: it <em>steepens when rates sell off</em> (rise) and <em>flattens when rates rally</em> (fall).</p>
+
+  <div class="card intuition"><div class="tag">Plain-English intuition</div>If you believe "the curve will steepen <em>and</em> it'll happen in a sell-off," why pay for steepening in a rally too? An outright steepener gives you the shape exposure in <em>all</em> directions. A conditional steepener gives it to you <strong>only in the sell-off you actually predicted</strong> — and because you give up the other scenarios, you can usually get it for free.</div>
+
+  <h3>How you build a conditional bear-steepener</h3>
+  <p>"Bear" = you expect a sell-off (rates up). "Steepener" = you expect the curve to steepen. So you want <em>upside-to-rates</em> exposure that's stronger on the long end. Payers give upside-to-rates exposure. So:</p>
+  <div class="eq"><span class="o">BUY</span>  3Mx20Y <span class="v">payer</span>   <span class="c">// long the volatile long end — wins big if 20Y rises</span>
+<span class="o">SELL</span> 3Mx3Y  <span class="v">payer</span>   <span class="c">// short the quiet short end — funds the trade</span></div>
+  <p>You're <span class="long-t">long the 20Y payer</span> and <span class="short-t">short the 3Y payer</span>, risk-weighted 1:1 (notionals 100 vs 595, from Section 1). Now trace the four things rates can do:</p>
+
+  <div class="grid2">
+    <div class="quad win"><h4>Sell-off, curve steepens ✓</h4><p>Both payers go in-the-money, but the 20Y leg you're <em>long</em> gains more than the 3Y leg you're <em>short</em> loses. <strong>Net profit.</strong> This is your thesis paying off.</p></div>
+    <div class="quad flat"><h4>Rally, curve flattens</h4><p>Rates fall, so <em>both</em> payers expire worthless. You gave nothing, you get nothing back. <strong>Flat P&amp;L</strong> — the downside is capped at zero because you set it up at zero cost.</p></div>
+    <div class="quad"><h4>Sell-off, but curve barely steepens</h4><p>Both options go ITM, but the steepening is <em>less</em> than the option prices already implied. The short leg's loss eats the long leg's gain. <strong>Small loss.</strong></p></div>
+    <div class="quad"><h4>Bull-steepen (curve right, direction wrong)</h4><p>Curve steepens but in a <em>rally</em>. Your payers expire worthless and you miss it entirely. An outright steepener would have caught this; the conditional one won't. <strong>That's the price of the discount.</strong></p></div>
+  </div>
+
+  <div class="card key"><div class="tag">The asymmetry you're buying</div>Heads (your scenario): you profit. Tails (rally): you lose nothing. The whole game is to get that payoff for <strong>zero up-front cost</strong>, and to make sure the curve has been steepening in sell-offs by <em>more</em> than the option market is charging you for. That second condition is the next section.</div>
+</section>
+
+<!-- ============ SECTION 4 ============ -->
+<section id="s4">
+  <div class="sec-no">EXHIBIT 04 · live</div>
+  <h2>Implied vs delivered directionality</h2>
+  <p class="sub">This is the single most important number pair in the paper. Get this and you understand <em>why</em> the trade has edge — not just how it's built.</p>
+
+  <p>The option market already <em>knows</em> the long end is more volatile, and charges for it. So part of the directionality is "priced in." The question is whether the market is charging <strong>enough</strong>. Two measures:</p>
+
+  <div class="card"><div class="tag">Definitions (memorize these two lines)</div>
+  <p style="margin:0 0 8px"><strong>Implied directionality</strong> = how much the <em>option market</em> thinks the curve is directional:</p>
+  <div class="eq" style="margin:6px 0 14px">Implied dir &nbsp;=&nbsp; 1 <span class="o">−</span> ( <span class="v">σ<sub>S</sub></span> / <span class="v">σ<sub>L</sub></span> )  &nbsp;&nbsp;<span class="c">// short-leg vol ÷ long-leg vol</span></div>
+  <p style="margin:0 0 8px"><strong>Delivered directionality</strong> = how directional the curve <em>actually was</em>:</p>
+  <div class="eq" style="margin:6px 0 0">Delivered dir &nbsp;=&nbsp; 1 <span class="o">−</span> <span class="v">β</span>  &nbsp;&nbsp;<span class="c">// β = how much the 3Y moves per 1bp move in the 20Y</span></div>
+  </div>
+
+  <p>Here <span class="inlmono">β</span> (beta) is the realized sensitivity of the short-end yield to the long-end yield. If the 20Y moves 10bp and the 3Y only moves 2bp, then <span class="inlmono">β = 0.2</span>, so delivered directionality = <span class="inlmono">1 − 0.2 = 0.8</span> (very directional — the long end does almost all the moving, which is exactly what steepens the curve in a sell-off).</p>
+
+  <div class="card key"><div class="tag">The trade rule, in one sentence</div>The conditional trade is <strong>attractive when delivered directionality is bigger than implied directionality</strong> — i.e. the curve has been moving <em>more</em> directionally than the option market is charging you for. The gap, <span class="inlmono">(delivered − implied)</span>, is your edge.</div>
+
+  <div class="calc" id="dirCalc">
+    <h3>Directionality calculator</h3>
+    <p style="font-size:14px;color:var(--ink-soft);max-width:none;margin-bottom:6px;">Drag the vols and the realized beta. Defaults are the paper's 3s/20s example (σ<sub>S</sub>=25, σ<sub>L</sub>=63.4).</p>
+    <div class="calc-row"><label>σ<sub>S</sub> — short-leg implied vol (bp/day)</label><input type="range" id="d_sS" min="5" max="80" step="0.5" value="25"><span class="v" id="d_sS_v">25.0</span></div>
+    <div class="calc-row"><label>σ<sub>L</sub> — long-leg implied vol (bp/day)</label><input type="range" id="d_sL" min="20" max="100" step="0.5" value="63.4"><span class="v" id="d_sL_v">63.4</span></div>
+    <div class="calc-row"><label>β — realized 3Y-to-20Y beta</label><input type="range" id="d_b" min="0" max="0.9" step="0.01" value="0.28"><span class="v" id="d_b_v">0.28</span></div>
+    <div class="calc-out">
+      <div class="calc-row" style="justify-content:space-between;margin:6px 0;"><span>Implied directionality &nbsp;<span style="color:var(--ink-faint)">= 1 − σ<sub>S</sub>/σ<sub>L</sub></span></span><span class="big short-t" id="d_imp">61%</span></div>
+      <div class="calc-row" style="justify-content:space-between;margin:6px 0;"><span>Delivered directionality &nbsp;<span style="color:var(--ink-faint)">= 1 − β</span></span><span class="big long-t" id="d_del">72%</span></div>
+      <div class="calc-row" style="justify-content:space-between;margin:10px 0 4px;border-top:1px dashed var(--grid-strong);padding-top:12px;"><span><b>Your edge = delivered − implied</b></span><span class="big" id="d_edge">+11%</span></div>
+      <div id="d_verdict" style="margin-top:8px;"></div>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--ink-faint)">In the paper's snapshot, implied directionality for 3s/20s was ~61% while delivered was ~72% — a positive edge, which is why they flagged EUR conditional steepeners as attractive. When the edge is negative, the market is <em>over</em>-charging and you'd rather be on the other side.</p>
+</section>
+
+<!-- ============ SECTION 5 ============ -->
+<section id="s5">
+  <div class="sec-no">EXHIBIT 05</div>
+  <h2>Two ways to make it free</h2>
+  <p class="sub">A balanced curve trade is premium-neutral <em>only if</em> the two legs' vols are identical — which they almost never are (σ<sub>L</sub> &gt; σ<sub>S</sub>). So we force it to zero cost one of two ways. This is the heart of the paper.</p>
+
+  <p>Here's the problem in numbers. If you trade both legs at ATMF with 1:1 risk weights, the premiums don't match:</p>
+  <table class="data">
+    <tr><th class="lbl">Leg</th><th>3Mx3Y (short)</th><th>3Mx20Y (long)</th></tr>
+    <tr><td class="lbl">PVBP</td><td>301</td><td>1790</td></tr>
+    <tr><td class="lbl">Implied vol (bp/day)</td><td class="cS">25.0</td><td class="cL">63.4</td></tr>
+    <tr><td class="lbl">ATMF strike</td><td>−0.10%</td><td>1.10%</td></tr>
+    <tr><td class="lbl">ATMF premium (bp of notional)</td><td class="cS">15</td><td class="cL">234</td></tr>
+    <caption>Source: the paper's Exhibit 8. The long-leg option costs far more — both because it's more sensitive (PVBP) and more volatile (σ). We must neutralize that.</caption>
+  </table>
+
+  <h3>Recipe A — Strike Shift <span style="color:var(--ink-faint);font-weight:400;font-size:16px">(keep 1:1 risk, move the strike)</span></h3>
+  <p>Keep the clean 1:1 risk weights (notional 100 long / 595 short — a true curve trade). To kill the cost difference, push the <em>expensive</em> leg's strike <strong>out-of-the-money</strong> until its premium drops to match the cheap leg you sold. In the example the 20Y strike moves up <span class="inlmono">23bp</span>, from 1.10% to <span class="inlmono">1.33%</span>. Now both legs cost the same and net to zero.</p>
+  <div class="card why"><div class="tag">The catch (this is the give-up)</div>Because your long 20Y is now struck 23bp OTM, the curve must steepen by at least <strong>~23bp beyond the forward, with yields rising</strong>, before you make a cent. Your <strong>entry level is 143bp</strong> (= strike 1.33% − strike −0.10%) versus a forward curve around 119bp — a <span class="inlmono">~23bp</span> "give-up." You kept full 1:1 curve exposure, but you start deep in a hole.</div>
+
+  <h3>Recipe B — Weighted Curve <span style="color:var(--ink-faint);font-weight:400;font-size:16px">(keep ATMF, shrink the notional)</span></h3>
+  <p>Leave both options at ATMF (no hole to climb out of). Instead, <strong>buy less of the expensive leg</strong>. Since ATMF premium is linear in vol, reducing the long-leg notional by the vol ratio <span class="inlmono">W = σ<sub>S</sub>/σ<sub>L</sub> = 25/63.4 ≈ 0.39</span> makes the two premiums match exactly. Watch it balance:</p>
+  <div class="eq">cost(long)  = notional <span class="o">×</span> premium = (100<span class="o">×</span><span class="v">0.39</span>) <span class="o">×</span> 234 = <span class="v">39</span> <span class="o">×</span> 234 ≈ 9100
+cost(short) = 595 <span class="o">×</span> 15                              ≈ 8900   <span class="c">// they match → zero net cost</span></div>
+  <div class="card why"><div class="tag">The catch (this is the leverage)</div>Your <strong>entry level is just 53bp</strong> — far better than 143bp! But there's a string attached: you no longer own the <em>real</em> 3s/20s curve. You own a <strong>vol-weighted curve</strong>: <span class="inlmono">W × 20Y − 3Y = 0.39 × 20Y − 3Y</span>. That changes how the trade behaves as rates move — which is the entire point of the simulator next.</p></div>
+
+  <h3>The strike-shift formula (Recipe A's math)</h3>
+  <p>How big must the strike shift <span class="inlmono">x</span> be? You need the option's price to drop by <span class="inlmono">ΔP</span> (the gap between the two ATMF premiums). Using delta (δ) and gamma (Γ) as a 2-term Taylor approximation of how price falls as you move the strike OTM:</p>
+  <div class="eq"><span class="v">δ</span><span class="o">·</span>(−x) <span class="o">+</span> 0.5<span class="o">·</span><span class="v">Γ</span><span class="o">·</span>(−x)²  <span class="o">=</span>  −ΔP        <span class="c">// (eq. 1)</span>
+
+x <span class="o">=</span>  [ <span class="v">δ</span> ± √( <span class="v">δ</span>² − 4<span class="o">·</span>(0.5<span class="o">·</span><span class="v">Γ</span><span class="o">·</span>ΔP) ) ] / ( 2<span class="o">·</span>0.5<span class="o">·</span><span class="v">Γ</span> )   <span class="c">// (eq. 2)</span></div>
+  <p style="font-size:14px;color:var(--ink-soft)">It's just the quadratic formula. δ captures the first-order price drop per bp of strike move; the Γ term is the curvature correction. (Exact when the vol surface is flat across strikes; an approximation when there's skew.) You don't need to compute this by hand — but now when you see equation (2) in the paper, you know it's "solve a quadratic for the strike shift."</p>
+</section>
+
+<!-- ============ SECTION 6 — THE SIMULATOR ============ -->
+<section id="s6">
+  <div class="sec-no">EXHIBIT 06 · the main event</div>
+  <h2>Simulator: which recipe wins?</h2>
+  <p class="sub">Both recipes are free at inception and exploit the same edge. But they pay out <em>completely differently</em> as rates move — because one owns the real curve and the other owns the weighted curve. This is a faithful, interactive rebuild of the paper's Exhibits 14–17.</p>
+
+  <div class="lab">
+    <h3>Payoff at expiry — Weighted vs Strike-shift</h3>
+    <p class="labsub">Horizontal axis: how much the 20Y yield moves (bp). Vertical axis: profit/loss of each free structure. Drag the sliders, or hit a preset to land exactly on the paper's three scenarios.</p>
+    <div class="lab-grid">
+      <div>
+        <canvas id="payoffCanvas" width="520" height="380" aria-label="Payoff diagram"></canvas>
+        <div class="presets">
+          <button data-beta="0.22">Exhibit 14 · β &lt; vol ratio</button>
+          <button data-beta="0.39">Exhibit 15 · β = vol ratio</button>
+          <button data-beta="0.80">Exhibit 16 · β &gt; vol ratio</button>
+        </div>
+      </div>
+      <div class="controls">
+        <label>β &nbsp;— realized 3Y/20Y beta <span class="val" id="p_b_v">0.22</span></label>
+        <input type="range" id="p_b" min="0.05" max="0.95" step="0.01" value="0.22">
+
+        <label>W &nbsp;— vol ratio σ<sub>S</sub>/σ<sub>L</sub> <span class="val" id="p_w_v">0.39</span></label>
+        <input type="range" id="p_w" min="0.15" max="0.85" step="0.01" value="0.39">
+
+        <label>δ &nbsp;— strike shift for Recipe A (bp) <span class="val" id="p_d_v">23</span></label>
+        <input type="range" id="p_d" min="0" max="55" step="1" value="23">
+
+        <label>x &nbsp;— scenario: 20Y yield change (bp) <span class="val" id="p_x_v">+30</span></label>
+        <input type="range" id="p_x" min="-10" max="60" step="1" value="30">
+
+        <div class="readout">
+          <div class="row"><span class="dotL">━ Weighted curve P&amp;L</span><b id="p_outW">+0.0</b></div>
+          <div class="row"><span class="dotS">━ Strike-shift P&amp;L</span><b id="p_outS">+0.0</b></div>
+          <div class="row" style="color:#9DB0C4"><span>Breakeven between them</span><b id="p_be">40 bp</b></div>
+        </div>
+        <div class="verdict" id="p_verdict"></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>What you're looking at — the slopes decoded</h3>
+  <p>Each line is just two option payoffs added together. Once both options are in-the-money, the slopes are fixed and simple:</p>
+  <ul class="clean">
+    <li><span class="long-t">Weighted curve</span> climbs at slope <span class="inlmono">W</span> (only long ITM), then at <span class="inlmono">W − β</span> once the short leg kicks in. If β grows past W, that second slope turns <em>negative</em> — the weighted curve has "flattened" against you.</li>
+    <li><span class="short-t">Strike-shift</span> first <em>dips</em> at slope <span class="inlmono">−β</span> (you're short the 3Y, which goes ITM before your OTM 20Y does), then rips upward at slope <span class="inlmono">1 − β</span> once the 20Y finally clears its strike. It starts in a hole but has the steepest upside.</li>
+  </ul>
+
+  <div class="card key"><div class="tag">The punchline — and why the breakeven is fixed</div>
+  Set the two "both-ITM" payoffs equal and the β term cancels on both sides, leaving:
+  <div class="eq" style="margin:10px 0 8px">x* &nbsp;=&nbsp; <span class="v">δ</span> / ( 1 <span class="o">−</span> W ) <span class="o">+</span> C<sub>L</sub>  &nbsp;≈&nbsp; 23/(1−0.39) + 2.3  ≈  <span class="v">40 bp</span></div>
+  The crossover between the two strategies is <strong>independent of how directional the move turns out to be (β)</strong> — try it: move the β slider and the breakeven stays at 40. It depends only on the strike shift δ, the vol ratio W, and carry. So:
+  <ul class="clean" style="margin-top:10px">
+    <li><strong>Small moves</strong> (x below ~40bp): the <span class="long-t">Weighted curve</span> wins — it's already making money while strike-shift is still climbing out of its hole.</li>
+    <li><strong>Big sell-offs</strong> (x above ~40bp, e.g. a "Bund VaR shock"): the <span class="short-t">Strike-shift</span> wins — its 1:1 exposure and steep <span class="inlmono">1−β</span> slope overtake the leveraged-but-capped weighted curve.</li>
+    <li><strong>Limiting case:</strong> if σ<sub>S</sub> = σ<sub>L</sub> (W=1), no strike shift is needed (δ=0) and the two recipes become <em>identical</em>. Set W near 0.85 and δ near 0 in the sim and watch the lines merge.</li>
+  </ul></div>
+  <p style="font-size:13px;color:var(--ink-faint)">Model note: this reproduces the paper's exhibits using its example parameters with small, fixed illustrative carries (C<sub>L</sub>≈C<sub>S</sub>≈2.3bp) so the kinks are visible. The shapes, slopes, and the 40bp breakeven match Exhibits 14–17 exactly; precise P&amp;L magnitudes depend on the exact carry assumptions.</p>
+</section>
+
+<!-- ============ SECTION 7 ============ -->
+<section id="s7">
+  <div class="sec-no">EXHIBIT 07</div>
+  <h2>Same trick, four more markets</h2>
+  <p class="sub">Once you see the pattern — "trade two options, force zero cost, exploit implied vs delivered directionality" — it generalizes. The paper points at four extensions.</p>
+
+  <h3>1 · Cross-market trades</h3>
+  <p>Instead of two maturities in one currency, use the <em>same</em> maturity in two currencies. Example from the paper: <span class="inlmono">USD − EUR</span> at 1Yx1Y. If USD is expected to sell off harder than EUR, you buy the USD payer and sell the EUR payer. EUR vol was about 40% of USD vol, and the USD-vs-EUR spread had widened in sell-offs by more than that ratio implied — same edge, different axis.</p>
+
+  <h3>2 · Swap-spread trades</h3>
+  <p>A <strong>swap spread</strong> is the gap between a swap yield and a government-bond yield (e.g. Bobl swap spreads vs Bobl yields). When that spread is directional with the underlying yield but the option market underprices it, you express the spread view conditionally — exactly the machinery above, relabeled.</p>
+
+  <h3>3 · Midcurve structures</h3>
+  <p>Options on forward-starting swaps ("reds," "greens," "blues" in futures slang). You can run a conditional steepener of, say, the reds/blues curve, or midcurves versus regular swaptions. Mechanics unchanged.</p>
+
+  <h3>4 · Conditional butterflies</h3>
+  <p>A <strong>butterfly</strong> bets on curvature: long the body, short the two wings, on a 50/100/50 risk basis. A conditional fly profits if the fly richens/cheapens <em>and</em> your yield view is right. Both recipes still apply — for the Weighted version, the body's risk weight becomes:</p>
+  <div class="eq">Body weight = ( <span class="v">σ<sub>Left</sub></span> <span class="o">+</span> <span class="v">σ<sub>Right</sub></span> ) / ( 2 <span class="o">·</span> <span class="v">σ<sub>Body</sub></span> )     <span class="c">// wings stay at 50% each</span></div>
+  <p>You can even build <em>market-neutral</em> conditional flies, where the risk weights are set by empirical regression to strip out level and curve exposure, leaving a pure curvature bet — then strikes are shifted for zero cost.</p>
+</section>
+
+<!-- ============ SECTION 8 ============ -->
+<section id="s8">
+  <div class="sec-no">EXHIBIT 08 · for the deep divers</div>
+  <h2>Why the two recipes share one edge</h2>
+  <p class="sub">The paper makes a beautiful claim: the number that tells you Recipe A is attractive (delivered − implied directionality) is <em>mathematically the same</em> as the number that tells you Recipe B is attractive (the regression beta of the weighted curve to yields). Here's the proof, slowed down.</p>
+
+  <p>Let <span class="inlmono">σ<sup>i</sup></span> = implied vol, <span class="inlmono">σ<sup>r</sup></span> = realized (delivered) vol, subscripts S/L for short/long. The regression beta of one yield on another can be written <span class="inlmono">β(Y<sub>S</sub>,Y<sub>L</sub>) = ρ · σ<sup>r</sup><sub>S</sub>/σ<sup>r</sup><sub>L</sub></span>, where ρ is their correlation.</p>
+
+  <div class="card"><div class="tag">Recipe A's metric: delivered − implied</div>
+  <div class="eq">delivered − implied
+ = [ 1 − ρ·(σ<sup>r</sup><sub>S</sub>/σ<sup>r</sup><sub>L</sub>) ] − [ 1 − (σ<sup>i</sup><sub>S</sub>/σ<sup>i</sup><sub>L</sub>) ]
+ = <span class="v">σ<sup>i</sup><sub>S</sub>/σ<sup>i</sup><sub>L</sub></span>  <span class="o">−</span>  ρ·(σ<sup>r</sup><sub>S</sub>/σ<sup>r</sup><sub>L</sub>)        <span class="c">// (call this result ★)</span></div></div>
+
+  <div class="card"><div class="tag">Recipe B's metric: beta of the weighted curve to Y<sub>L</sub></div>
+  <p style="margin:0 0 6px">The weighted curve is <span class="inlmono">(σ<sup>i</sup><sub>S</sub>/σ<sup>i</sup><sub>L</sub>)·Y<sub>L</sub> − Y<sub>S</sub></span>. Regression beta is <em>associative</em>: <span class="inlmono">β(A−B, X) = β(A,X) − β(B,X)</span>. So:</p>
+  <div class="eq">β( (σ<sup>i</sup><sub>S</sub>/σ<sup>i</sup><sub>L</sub>)·Y<sub>L</sub> − Y<sub>S</sub> , Y<sub>L</sub> )
+ = (σ<sup>i</sup><sub>S</sub>/σ<sup>i</sup><sub>L</sub>)·β(Y<sub>L</sub>,Y<sub>L</sub>) − β(Y<sub>S</sub>,Y<sub>L</sub>)
+ = <span class="v">σ<sup>i</sup><sub>S</sub>/σ<sup>i</sup><sub>L</sub></span>  <span class="o">−</span>  ρ·(σ<sup>r</sup><sub>S</sub>/σ<sup>r</sup><sub>L</sub>)        <span class="c">// identical to ★ ✓</span></div></div>
+
+  <p>The two expressions are the same symbol-for-symbol. That's why the paper says the methods are "fundamentally similar and exploit the discrepancy between implied and delivered directionality" — they're measuring the identical edge two ways. They only <em>differ</em> in how the P&amp;L evolves once rates start moving, which is the Section 6 story.</p>
+
+  <div class="card key"><div class="tag">So how do you choose?</div><strong>Expect a small-to-moderate, persistent grind</strong> in your direction → Weighted curve (better entry, wins below the ~40bp breakeven). <strong>Expect a violent tail sell-off</strong> → Strike shift (full 1:1 exposure, wins above breakeven). When in doubt, the breakeven formula <span class="inlmono">δ/(1−W) + C<sub>L</sub></span> tells you exactly where the handoff is.</div>
+</section>
+
+<!-- ============ SECTION 9 ============ -->
+<section id="s9">
+  <div class="sec-no">EXHIBIT 09</div>
+  <h2>Recap &amp; self-test</h2>
+  <p class="sub">If you can answer these without scrolling up, you understand this paper better than most people on a rates desk. Click an answer to check it.</p>
+
+  <h3>The whole paper in six lines</h3>
+  <ul class="clean">
+    <li>A conditional curve trade = <span class="long-t">buy a payer/receiver on one tail</span>, <span class="short-t">sell one on the other</span>, so curve exposure switches on <em>only</em> in your predicted direction.</li>
+    <li>It's built for <strong>zero cost</strong>, so the wrong direction just expires flat.</li>
+    <li>Edge exists when <strong>delivered directionality &gt; implied directionality</strong> (curve moved more directionally than options were charging).</li>
+    <li><strong>Recipe A (Strike shift):</strong> keep 1:1 risk, push the dear leg OTM. Worse entry, but full real-curve exposure and the steepest upside.</li>
+    <li><strong>Recipe B (Weighted curve):</strong> keep ATMF, shrink the dear leg's notional by the vol ratio. Better entry, but you own a vol-weighted curve that can cap out or reverse.</li>
+    <li><strong>Crossover at</strong> <span class="inlmono">x* = δ/(1−W) + C<sub>L</sub> ≈ 40bp</span>, independent of β. Small move → B wins. Big sell-off → A wins. Equal vols → identical.</li>
+  </ul>
+
+  <div class="quiz" id="quiz"></div>
+
+  <h3>Glossary, fast</h3>
+  <table class="data" style="font-size:13px">
+    <tr><th class="lbl">Term</th><th class="lbl">Means</th></tr>
+    <tr><td class="lbl">Payer / Receiver</td><td class="lbl">Right to pay fixed (bet rates ↑) / receive fixed (bet rates ↓)</td></tr>
+    <tr><td class="lbl">3Mx20Y</td><td class="lbl">Option expiring in 3M, on a 20Y swap</td></tr>
+    <tr><td class="lbl">PVBP / DV01</td><td class="lbl">P&amp;L per 1bp yield move</td></tr>
+    <tr><td class="lbl">ATMF / OTM</td><td class="lbl">Strike at the forward / further away & cheaper</td></tr>
+    <tr><td class="lbl">σ (bp/day)</td><td class="lbl">Implied volatility — the price of uncertainty</td></tr>
+    <tr><td class="lbl">β</td><td class="lbl">How much the short yield moves per 1bp of long yield</td></tr>
+    <tr><td class="lbl">W = σ<sub>S</sub>/σ<sub>L</sub></td><td class="lbl">Vol ratio; the weighted-curve risk weight</td></tr>
+    <tr><td class="lbl">Bear / Bull</td><td class="lbl">Rates rising (sell-off) / falling (rally)</td></tr>
+  </table>
+</section>
+
+<footer><div class="wrap">
+  <p>Built as a learning companion to <em>"A primer on Conditional Trades,"</em> J.P. Morgan European Rates Strategy, 26 May 2016. All concepts, definitions, and the worked example are drawn from that note.</p>
+  <p class="disc"><strong>Not investment advice.</strong> This is an educational explainer of a published research framework. Numbers are illustrative and simplified for teaching (notably the carry assumptions in the simulator). Do your own analysis before trading anything.</p>
+</div></footer>
+</main>
+
+<script>
+/* ---------- progress bar + active nav ---------- */
+const prog = document.getElementById('progress');
+const navLinks = [...document.querySelectorAll('#topnav a')];
+const secs = [...document.querySelectorAll('section')];
+function onScroll(){
+  const h = document.documentElement;
+  const sc = h.scrollTop / (h.scrollHeight - h.clientHeight);
+  prog.style.width = (sc*100)+'%';
+  let cur = secs[0].id;
+  for(const s of secs){ if(s.getBoundingClientRect().top < 120) cur = s.id; }
+  navLinks.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+cur));
+}
+document.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+/* ---------- directionality calculator ---------- */
+(function(){
+  const sS=document.getElementById('d_sS'), sL=document.getElementById('d_sL'), b=document.getElementById('d_b');
+  const sSv=document.getElementById('d_sS_v'), sLv=document.getElementById('d_sL_v'), bv=document.getElementById('d_b_v');
+  const imp=document.getElementById('d_imp'), del=document.getElementById('d_del'), edge=document.getElementById('d_edge'), verdict=document.getElementById('d_verdict');
+  function upd(){
+    let vs=+sS.value, vl=+sL.value, be=+b.value;
+    if(vs>vl){ vs=vl; sS.value=vl; }                  // short vol shouldn't exceed long here
+    sSv.textContent=(+sS.value).toFixed(1); sLv.textContent=vl.toFixed(1); bv.textContent=be.toFixed(2);
+    const implied = 1 - vs/vl;
+    const delivered = 1 - be;
+    const e = delivered - implied;
+    imp.textContent=(implied*100).toFixed(0)+'%';
+    del.textContent=(delivered*100).toFixed(0)+'%';
+    edge.textContent=(e>=0?'+':'')+(e*100).toFixed(0)+'%';
+    edge.className='big'; edge.style.color = e>=0 ? 'var(--good)' : 'var(--short)';
+    verdict.innerHTML = e>0
+      ? '<span class="pill go">ATTRACTIVE</span> &nbsp;The curve delivered more directionality than options charge — a conditional steepener has positive edge.'
+      : (e<0
+        ? '<span class="pill no">RICH</span> &nbsp;Options are over-charging for directionality. You\'d rather sell this structure than buy it.'
+        : '<span class="pill no">FAIR</span> &nbsp;No edge — implied and delivered match.');
+  }
+  [sS,sL,b].forEach(el=>el.addEventListener('input',upd)); upd();
+})();
+
+/* ---------- payoff simulator ---------- */
+(function(){
+  const cv=document.getElementById('payoffCanvas'), ctx=cv.getContext('2d');
+  const elB=document.getElementById('p_b'), elW=document.getElementById('p_w'), elD=document.getElementById('p_d'), elX=document.getElementById('p_x');
+  const vB=document.getElementById('p_b_v'), vW=document.getElementById('p_w_v'), vD=document.getElementById('p_d_v'), vX=document.getElementById('p_x_v');
+  const outW=document.getElementById('p_outW'), outS=document.getElementById('p_outS'), beEl=document.getElementById('p_be'), verdict=document.getElementById('p_verdict');
+  const CL=2.3, CS=2.3;           // small illustrative carries
+  const XMIN=-10, XMAX=60;
+
+  function wtd(x,W,b){ return W*Math.max(x-CL,0) - Math.max(b*x-CS,0); }
+  function ss(x,W,b,d){ return Math.max(x-CL-d,0) - Math.max(b*x-CS,0); }
+
+  // device-pixel-ratio crispness
+  function fit(){
+    const r = cv.getBoundingClientRect(); const dpr = window.devicePixelRatio||1;
+    cv.width = r.width*dpr; cv.height = (r.width*0.73)*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    cv.style.height = (r.width*0.73)+'px';
+  }
+  function draw(){
+    const W=+elW.value, b=+elB.value, d=+elD.value, x=+elX.value;
+    vB.textContent=b.toFixed(2); vW.textContent=W.toFixed(2); vD.textContent=d.toFixed(0); vX.textContent=(x>=0?'+':'')+x;
+
+    const Wcss = cv.clientWidth, Hcss = cv.clientWidth*0.73;
+    const padL=44, padR=14, padT=16, padB=30;
+    const plotW = Wcss-padL-padR, plotH = Hcss-padT-padB;
+
+    // y-range from data
+    let ymin=999, ymax=-999;
+    for(let xi=XMIN; xi<=XMAX; xi+=1){ const a=wtd(xi,W,b), s=ss(xi,W,b,d); ymin=Math.min(ymin,a,s); ymax=Math.max(ymax,a,s); }
+    ymin=Math.min(ymin,-2); ymax=Math.max(ymax,2);
+    const pad=(ymax-ymin)*0.08; ymin-=pad; ymax+=pad;
+
+    const X = xi => padL + (xi-XMIN)/(XMAX-XMIN)*plotW;
+    const Y = yi => padT + (ymax-yi)/(ymax-ymin)*plotH;
+
+    ctx.clearRect(0,0,Wcss,Hcss);
+    // grid
+    ctx.strokeStyle='#1C3147'; ctx.lineWidth=1; ctx.font='10px IBM Plex Mono';
+    ctx.fillStyle='#5E7790';
+    for(let gx=XMIN; gx<=XMAX; gx+=10){ ctx.beginPath(); ctx.moveTo(X(gx),padT); ctx.lineTo(X(gx),padT+plotH); ctx.stroke(); ctx.fillText((gx>0?'+':'')+gx, X(gx)-8, padT+plotH+16); }
+    const ystep = (ymax-ymin)>40?10:5;
+    for(let gy=Math.ceil(ymin/ystep)*ystep; gy<=ymax; gy+=ystep){ ctx.beginPath(); ctx.moveTo(padL,Y(gy)); ctx.lineTo(padL+plotW,Y(gy)); ctx.stroke(); ctx.fillText(gy, 6, Y(gy)+3); }
+    // zero line
+    ctx.strokeStyle='#33526F'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(padL,Y(0)); ctx.lineTo(padL+plotW,Y(0)); ctx.stroke();
+
+    // breakeven vertical
+    const be = d/(1-W) + CL;
+    ctx.strokeStyle='#6E8298'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(X(be),padT); ctx.lineTo(X(be),padT+plotH); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#9DB0C4'; ctx.fillText('breakeven', X(be)+4, padT+12);
+
+    // curves
+    function plot(fn,color){ ctx.strokeStyle=color; ctx.lineWidth=2.6; ctx.beginPath(); let first=true;
+      for(let xi=XMIN; xi<=XMAX; xi+=0.5){ const px=X(xi), py=Y(fn(xi)); if(first){ctx.moveTo(px,py);first=false;} else ctx.lineTo(px,py);} ctx.stroke(); }
+    plot(x2=>ss(x2,W,b,d),'#E59B6E');     // strike-shift = clay
+    plot(x2=>wtd(x2,W,b),'#5C93EE');      // weighted = cobalt
+
+    // current-x marker
+    const yw=wtd(x,W,b), ysv=ss(x,W,b,d);
+    ctx.strokeStyle='#ffffff44'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X(x),padT); ctx.lineTo(X(x),padT+plotH); ctx.stroke();
+    function dot(yv,c){ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(X(x),Y(yv),4.5,0,7); ctx.fill(); ctx.strokeStyle='#0C1925'; ctx.lineWidth=1.5; ctx.stroke(); }
+    dot(yw,'#5C93EE'); dot(ysv,'#E59B6E');
+
+    // readouts
+    outW.textContent=(yw>=0?'+':'')+yw.toFixed(1); outW.style.color = yw>=0?'#7FB0FF':'#E59B6E';
+    outS.textContent=(ysv>=0?'+':'')+ysv.toFixed(1); outS.style.color = ysv>=0?'#7FB0FF':'#E59B6E';
+    beEl.textContent = be.toFixed(0)+' bp';
+
+    let msg;
+    if(Math.abs(W-1)<0.04 && d<=1){ msg='With equal vols (W≈1) and no strike shift, the two recipes <b>collapse onto each other</b> — there is nothing to choose between them.'; }
+    else if(x < be){ msg='At this move (below breakeven), the <span class="dotL">Weighted curve</span> dominates — better entry means it\'s already in profit while strike-shift climbs out of its hole.'; }
+    else { msg='At this move (above breakeven), the <span class="dotS">Strike-shift</span> dominates — its full 1:1 exposure and 1−β slope have overtaken the leveraged-but-capped weighted curve.'; }
+    if(b>W+0.001 && x>0){ msg+=' Note β &gt; W here: the weighted curve has <b>flattened against you</b>, so it can run into losses.'; }
+    verdict.innerHTML=msg;
+  }
+  function redraw(){ fit(); draw(); }
+  [elB,elW,elD,elX].forEach(el=>el.addEventListener('input',draw));
+  document.querySelectorAll('.presets button').forEach(btn=>btn.addEventListener('click',()=>{ elB.value=btn.dataset.beta; draw(); }));
+  window.addEventListener('resize', redraw);
+  // fonts may shift layout; redraw after load
+  redraw(); setTimeout(redraw, 400); if(document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
+})();
+
+/* ---------- quiz ---------- */
+(function(){
+  const data=[
+    {q:'You hold a free conditional bear-steepener (long 20Y payer, short 3Y payer). Rates RALLY and the curve flattens. What happens?',
+     opts:['You lose a lot on the short leg','Both options expire worthless — flat P&L','You profit because the curve moved','Your loss is unlimited'], correct:1,
+     why:'Both legs are payers, so a rally pushes both out-of-the-money. They expire worthless. Because you set it up at zero cost, your downside in the wrong direction is just flat — that\'s the core appeal.'},
+    {q:'Implied directionality is 60% and delivered directionality is 75%. Is the conditional trade attractive?',
+     opts:['No — options are too cheap to sell','Yes — delivered (75%) exceeds implied (60%), so there\'s edge','Cannot tell without the strike','Only if vols are equal'], correct:1,
+     why:'Edge = delivered − implied = 75% − 60% = +15%. The curve delivered more directionality than the options charged for, so buying the structure has positive expected value.'},
+    {q:'Compared to Strike-shift, the Weighted-curve recipe gives a BETTER entry level (53bp vs 143bp). What is the trade-off?',
+     opts:['It costs premium up front','You own a vol-weighted curve, which can cap out or reverse','It has unlimited downside in a rally','It needs the vols to be equal'], correct:1,
+     why:'Better entry comes from shrinking the expensive leg\'s notional. The cost is that your exposure is now W·20Y − 3Y, not the real curve — so in a large move it saturates or even loses while strike-shift\'s full exposure keeps paying.'},
+    {q:'The breakeven between the two recipes is x* = δ/(1−W) + Cₗ. If a violent sell-off pushes yields WAY past x*, which recipe wins?',
+     opts:['Weighted curve','Strike shift','They tie','Depends entirely on β'], correct:1,
+     why:'Above the breakeven, Strike-shift\'s steep 1−β slope and full 1:1 exposure overtake the weighted curve. And note: the breakeven itself does not depend on β — the realized directionality cancels out.'}
+  ];
+  const root=document.getElementById('quiz');
+  data.forEach((item,i)=>{
+    const box=document.createElement('div'); box.style.marginBottom='22px';
+    const q=document.createElement('div'); q.className='q'; q.textContent=(i+1)+'. '+item.q; box.appendChild(q);
+    const ex=document.createElement('div'); ex.className='explain'; ex.textContent=item.why;
+    item.opts.forEach((o,j)=>{
+      const btn=document.createElement('button'); btn.className='opt'; btn.textContent=o;
+      btn.addEventListener('click',()=>{
+        [...box.querySelectorAll('.opt')].forEach(b=>b.disabled=true);
+        btn.classList.add(j===item.correct?'correct':'wrong');
+        if(j!==item.correct) box.querySelectorAll('.opt')[item.correct].classList.add('correct');
+        ex.classList.add('show');
+      });
+      box.appendChild(btn);
+    });
+    box.appendChild(ex); root.appendChild(box);
+  });
+})();
+</script>
+</body>
+</html>

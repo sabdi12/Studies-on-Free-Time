@@ -449,6 +449,177 @@
     text-align: right;
   }
 
+  /* PERSPECTIVE BANNER */
+  .perspective {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(96, 165, 250, 0.04));
+    border: 1px solid var(--cyan);
+    border-radius: 4px;
+    padding: 16px 22px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .perspective-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--cyan);
+    color: var(--bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .perspective-text { flex: 1; }
+  .perspective-text .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 4px;
+  }
+  .perspective-text .desc {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .perspective-text .desc strong { color: var(--cyan); }
+
+  /* INDUSTRY POSITIONING */
+  .industry-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    margin-top: 24px;
+  }
+  .industry-panel h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+  .industry-panel .sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+
+  .tribes-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .tribes-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 500px) {
+    .tribes-grid { grid-template-columns: 1fr; }
+  }
+
+  .tribe {
+    background: var(--panel-light);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .tribe.you {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 1px var(--cyan), 0 0 20px rgba(34, 211, 238, 0.15);
+  }
+  .tribe.you::before {
+    content: 'YOU';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--cyan);
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+  }
+  .tribe-name {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 17px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .tribe-examples {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .tribe-position {
+    background: var(--bg);
+    border-radius: 3px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .tribe-position-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .tribe-position-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .tribe-position-value.long { color: var(--green); }
+  .tribe-position-value.short { color: var(--red); }
+  .tribe-position-value.flat { color: var(--muted); }
+
+  .tribe-mood {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.4;
+    padding-top: 10px;
+    border-top: 1px dotted var(--border);
+    min-height: 50px;
+  }
+  .tribe-mood.panic { color: var(--red); font-weight: 600; }
+  .tribe-mood.relief { color: var(--green); }
+  .tribe-mood.calm { color: var(--muted); }
+
+  /* MARKET FLOW DIAGRAM */
+  .flow-diagram {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .flow-diagram h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
   /* SUMMARY MODAL */
   .summary-card {
     background: var(--panel);
@@ -494,6 +665,14 @@
 
   <div class="intro">
     <strong>How to play:</strong> You're long $5B of cash 10Y Treasuries, short an equivalent DV01 of TY futures, financed in repo. The trade earns ~5 ticks of "basis convergence" by delivery. Click <strong>NEXT DAY</strong> to advance through Feb–April 2020. Watch the <strong>basis</strong>, your <strong>P&amp;L</strong>, and your <strong>margin</strong>. If margin call goes red — you must liquidate. That's the doom loop.
+  </div>
+
+  <div class="perspective">
+    <div class="perspective-icon">L</div>
+    <div class="perspective-text">
+      <div class="label">Your Seat in the Market</div>
+      <div class="desc">You are a <strong>Leveraged Fund</strong> (a hedge fund running the cash-futures basis trade). In the futures market you are <strong>SHORT</strong>; in the cash bond market you are <strong>LONG</strong>; in the repo market you are <strong>BORROWING</strong>. Below the chart, watch how the four industry "tribes" sit relative to each other — every trade has a counterparty.</div>
+    </div>
   </div>
 
   <div class="main-grid">
@@ -661,6 +840,167 @@
       <path d="M 800 140 Q 800 220, 450 220 Q 110 220, 110 140" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#redArrow)" stroke-dasharray="6,4"/>
       <text x="450" y="245" text-anchor="middle" fill="#ef4444" font-size="14" font-style="italic" font-weight="600">↻ Selling drives cash bonds even lower — the loop intensifies</text>
     </svg>
+  </div>
+
+  <!-- INDUSTRY POSITIONING -->
+  <div class="industry-panel">
+    <h3>Industry Positioning · Who Holds What</h3>
+    <div class="sub">Every long has a short on the other side. Here's how the four big tribes are positioned in Treasury futures today. <strong style="color:var(--cyan);">The cyan-bordered card is YOU.</strong></div>
+
+    <div class="tribes-grid">
+
+      <!-- LEVERAGED FUNDS (YOU) -->
+      <div class="tribe you" id="tribeLev">
+        <div class="tribe-name">Leveraged Funds</div>
+        <div class="tribe-examples">Hedge funds, basis-trade desks, prop shops</div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Futures</div>
+          <div class="tribe-position-value short" id="levFut">SHORT $5.0B</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Cash bonds</div>
+          <div class="tribe-position-value long" id="levCash">LONG $5.0B</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Repo</div>
+          <div class="tribe-position-value short" id="levRepo">BORROW $4.9B</div>
+        </div>
+        <div class="tribe-mood" id="levMood">Earning basis carry. Confident. Position grinding to delivery.</div>
+      </div>
+
+      <!-- ASSET MANAGERS -->
+      <div class="tribe" id="tribeAM">
+        <div class="tribe-name">Asset Managers</div>
+        <div class="tribe-examples">Pension funds, mutual funds, PIMCO, BlackRock</div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Futures</div>
+          <div class="tribe-position-value long" id="amFut">LONG $40B</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Cash bonds</div>
+          <div class="tribe-position-value long" id="amCash">LONG $200B+</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Repo</div>
+          <div class="tribe-position-value flat" id="amRepo">N/A</div>
+        </div>
+        <div class="tribe-mood" id="amMood">Permanent long for index/duration replication. Patient.</div>
+      </div>
+
+      <!-- DEALERS -->
+      <div class="tribe" id="tribeDealer">
+        <div class="tribe-name">Dealers</div>
+        <div class="tribe-examples">JPM, Goldman, Citi — the market makers</div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Futures</div>
+          <div class="tribe-position-value flat" id="dealerFut">~FLAT</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Cash bonds</div>
+          <div class="tribe-position-value long" id="dealerCash">LONG $80B</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Repo</div>
+          <div class="tribe-position-value long" id="dealerRepoP">LEND $200B</div>
+        </div>
+        <div class="tribe-mood" id="dealerMood">Warehousing inventory, making markets, financing clients.</div>
+      </div>
+
+      <!-- THE FED -->
+      <div class="tribe" id="tribeFed">
+        <div class="tribe-name">The Fed</div>
+        <div class="tribe-examples">U.S. central bank — the backstop</div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Futures</div>
+          <div class="tribe-position-value flat" id="fedFut">NEVER</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Cash bonds</div>
+          <div class="tribe-position-value long" id="fedCash">LONG $2.4T</div>
+        </div>
+        <div class="tribe-position">
+          <div class="tribe-position-label">Repo</div>
+          <div class="tribe-position-value flat" id="fedRepoP">STANDBY</div>
+        </div>
+        <div class="tribe-mood" id="fedMood">Watching markets. SOMA portfolio steady. No interventions.</div>
+      </div>
+
+    </div>
+
+    <div class="flow-diagram">
+      <h4>Live Market Flow · Who's Trading With Whom</h4>
+      <svg viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" font-family="'Inter Tight', sans-serif" style="width:100%;height:auto;" id="flowSvg">
+        <defs>
+          <marker id="greenArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L9,3 L0,6 Z" fill="#4ade80"/>
+          </marker>
+          <marker id="redArrowFlow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L9,3 L0,6 Z" fill="#ef4444"/>
+          </marker>
+          <marker id="blueArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L9,3 L0,6 Z" fill="#60a5fa"/>
+          </marker>
+        </defs>
+
+        <!-- The 4 tribes as nodes -->
+        <!-- Leveraged Funds (top-left) -->
+        <g id="nodeLev">
+          <circle cx="160" cy="60" r="42" fill="#131825" stroke="#22d3ee" stroke-width="2.5"/>
+          <text x="160" y="56" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">LEVERAGED</text>
+          <text x="160" y="70" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700">FUNDS</text>
+          <text x="160" y="115" text-anchor="middle" fill="#7a8398" font-size="10" font-style="italic">(you)</text>
+        </g>
+
+        <!-- Asset Managers (top-right) -->
+        <g id="nodeAM">
+          <circle cx="740" cy="60" r="42" fill="#131825" stroke="#4ade80" stroke-width="2.5"/>
+          <text x="740" y="56" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700">ASSET</text>
+          <text x="740" y="70" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700">MANAGERS</text>
+        </g>
+
+        <!-- Dealers (bottom-left) -->
+        <g id="nodeDealer">
+          <circle cx="160" cy="180" r="42" fill="#131825" stroke="#fbbf24" stroke-width="2.5"/>
+          <text x="160" y="178" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">DEALERS</text>
+          <text x="160" y="192" text-anchor="middle" fill="#7a8398" font-size="9">market makers</text>
+        </g>
+
+        <!-- Fed (bottom-right) -->
+        <g id="nodeFed">
+          <circle cx="740" cy="180" r="42" fill="#131825" stroke="#60a5fa" stroke-width="2.5" id="fedCircle"/>
+          <text x="740" y="178" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="700">THE FED</text>
+          <text x="740" y="192" text-anchor="middle" fill="#7a8398" font-size="9">backstop</text>
+        </g>
+
+        <!-- FLOW ARROWS - dynamically updated -->
+        <!-- AM sells futures to Lev Funds (futures market) -->
+        <g id="flowFutures">
+          <path d="M 698 60 L 202 60" stroke="#4ade80" stroke-width="2" marker-end="url(#greenArrow)" opacity="0.7"/>
+          <text x="450" y="50" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600" id="flowFuturesLabel">Futures: AM long ← Lev short</text>
+        </g>
+
+        <!-- Dealers fund Lev Funds via repo -->
+        <g id="flowRepo">
+          <path d="M 160 138 L 160 102" stroke="#fbbf24" stroke-width="2" marker-end="url(#greenArrow)" opacity="0.7"/>
+          <text x="170" y="125" text-anchor="start" fill="#fbbf24" font-size="11" font-weight="600" id="flowRepoLabel">Repo $$ →</text>
+        </g>
+
+        <!-- AM holds bonds bought from dealers -->
+        <g id="flowCash">
+          <path d="M 202 180 L 698 180" stroke="#60a5fa" stroke-width="2" marker-end="url(#blueArrow)" opacity="0.7"/>
+          <text x="450" y="200" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" id="flowCashLabel">Cash bonds flow ↔ via dealer market-making</text>
+        </g>
+
+        <!-- Fed intervention arrow (hidden initially) -->
+        <g id="flowFed" opacity="0">
+          <path d="M 698 180 L 202 180" stroke="#60a5fa" stroke-width="3" marker-end="url(#blueArrow)" stroke-dasharray="5,3"/>
+          <text x="450" y="220" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="700" id="flowFedLabel">🏦 Fed buying Treasuries from dealers</text>
+        </g>
+      </svg>
+      <div style="font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.5;" id="flowExplain">
+        <strong style="color: var(--text);">Reading this map:</strong> Asset Managers go LONG futures (to track duration cheaply). Leveraged Funds take the other side — SHORT futures — and offset by going LONG cash bonds. They finance the cash bonds via repo from Dealers. Net zero positions across the system, but the flows are massive.
+      </div>
+    </div>
   </div>
 
   <!-- SUMMARY (shown at end) -->
@@ -1147,6 +1487,164 @@ function drawPositionChart(W, H, pad, cw, ch) {
   ctx.fillText('Industry Leveraged Fund Gross Shorts (indexed to 100 = pre-crisis)', pad.l, 18);
 }
 
+function updateIndustryPositions(day) {
+  const dat = simData[day-1];
+  const phase = dat.phase;
+
+  // Position sizes shrink during crisis as funds liquidate
+  let levSize, amSize, dealerSize;
+
+  if (phase === 'calm') {
+    levSize = 5.0; amSize = 40; dealerSize = 80;
+  } else if (phase === 'warning') {
+    levSize = 5.0; amSize = 42; dealerSize = 75;
+  } else if (phase === 'crisis') {
+    // Lev funds shrinking, AMs selling some too, dealers stuck
+    const t = Math.min(1, (day - 27) / 9);
+    levSize = 5.0 - 2.8 * t; // collapses to ~$2.2B
+    amSize = 42 - 8 * t;     // some redemptions
+    dealerSize = 80 + 30 * t; // stuck warehousing what they can't sell
+  } else { // recovery
+    const t = Math.min(1, (day - 36) / 24);
+    levSize = 2.2 + 0.3 * t; // partial recovery
+    amSize = 34 + 4 * t;
+    dealerSize = 110 - 25 * t;
+  }
+
+  // === LEVERAGED FUNDS (YOU) ===
+  document.getElementById('levFut').textContent = 'SHORT $' + levSize.toFixed(1) + 'B';
+  document.getElementById('levCash').textContent = 'LONG $' + levSize.toFixed(1) + 'B';
+  document.getElementById('levRepo').textContent = 'BORROW $' + (levSize * 0.98).toFixed(1) + 'B';
+
+  const levMood = document.getElementById('levMood');
+  if (phase === 'calm') {
+    levMood.textContent = 'Earning basis carry. Confident. Position grinding to delivery.';
+    levMood.className = 'tribe-mood calm';
+  } else if (phase === 'warning') {
+    levMood.textContent = 'Watching vol carefully. P&L choppy but still in the green.';
+    levMood.className = 'tribe-mood';
+  } else if (phase === 'crisis') {
+    levMood.textContent = '🚨 MARGIN CALLS. Force-selling cash bonds. Cutting positions at any price.';
+    levMood.className = 'tribe-mood panic';
+  } else {
+    levMood.textContent = 'Survivors are smaller, scarred, more cautious. Some funds liquidated.';
+    levMood.className = 'tribe-mood';
+  }
+
+  // === ASSET MANAGERS ===
+  document.getElementById('amFut').textContent = 'LONG $' + amSize.toFixed(0) + 'B';
+  document.getElementById('amCash').textContent = 'LONG $' + (amSize * 5).toFixed(0) + 'B';
+  document.getElementById('amRepo').textContent = 'N/A';
+
+  const amMood = document.getElementById('amMood');
+  if (phase === 'calm') {
+    amMood.textContent = 'Permanent long for index/duration replication. Patient.';
+    amMood.className = 'tribe-mood calm';
+  } else if (phase === 'warning') {
+    amMood.textContent = 'Some client redemptions starting. Adding to bond longs (flight to quality).';
+    amMood.className = 'tribe-mood';
+  } else if (phase === 'crisis') {
+    amMood.textContent = 'Redemption tsunami. Forced to sell bonds — even Treasuries — to pay clients in CASH.';
+    amMood.className = 'tribe-mood panic';
+  } else {
+    amMood.textContent = 'Stabilizing. Cash needs met by Fed-backstopped market. Restoring positions.';
+    amMood.className = 'tribe-mood relief';
+  }
+
+  // === DEALERS ===
+  document.getElementById('dealerFut').textContent = '~FLAT';
+  document.getElementById('dealerCash').textContent = 'LONG $' + dealerSize.toFixed(0) + 'B';
+  document.getElementById('dealerRepoP').textContent = 'LEND $' + (dealerSize * 2.5).toFixed(0) + 'B';
+
+  const dealerMood = document.getElementById('dealerMood');
+  if (phase === 'calm') {
+    dealerMood.textContent = 'Warehousing inventory, making markets, financing clients.';
+    dealerMood.className = 'tribe-mood calm';
+  } else if (phase === 'warning') {
+    dealerMood.textContent = 'Bid-offer widening. Balance sheet getting full. Risk officers worried.';
+    dealerMood.className = 'tribe-mood';
+  } else if (phase === 'crisis') {
+    dealerMood.textContent = '🚨 BALANCE SHEET CAPPED. Cannot absorb more selling. Refusing trades. Pulling repo lines.';
+    dealerMood.className = 'tribe-mood panic';
+  } else {
+    dealerMood.textContent = 'Selling inventory to Fed. Balance sheet relieved. Slowly normalizing.';
+    dealerMood.className = 'tribe-mood relief';
+  }
+
+  // === FED ===
+  const fedCash = phase === 'recovery' ? '$3.6T' :
+                  phase === 'crisis' && day > 36 ? '$2.9T' :
+                  phase === 'crisis' ? '$2.5T' : '$2.4T';
+  document.getElementById('fedCash').textContent = 'LONG ' + fedCash;
+  document.getElementById('fedFut').textContent = 'NEVER';
+  document.getElementById('fedRepoP').textContent = (dat.fed > 30) ? 'LEND $500B+' : 'STANDBY';
+
+  const fedMood = document.getElementById('fedMood');
+  if (dat.fed === 0) {
+    fedMood.textContent = 'Watching markets. SOMA portfolio steady. No interventions.';
+    fedMood.className = 'tribe-mood calm';
+  } else if (dat.fed < 30) {
+    fedMood.textContent = 'Monitoring repo stress. Considering interventions.';
+    fedMood.className = 'tribe-mood';
+  } else if (dat.fed < 80) {
+    fedMood.textContent = '⚠ TOMOs activated. Lending overnight cash. Opening swap lines.';
+    fedMood.className = 'tribe-mood';
+  } else {
+    fedMood.textContent = '🏦 UNLIMITED QE. Buying $75B/day of Treasuries. Backstopping everything.';
+    fedMood.className = 'tribe-mood relief';
+  }
+
+  // === FLOW DIAGRAM ARROWS ===
+  const fedCircle = document.getElementById('fedCircle');
+  const flowFed = document.getElementById('flowFed');
+  const flowFuturesLabel = document.getElementById('flowFuturesLabel');
+  const flowRepoLabel = document.getElementById('flowRepoLabel');
+  const flowCashLabel = document.getElementById('flowCashLabel');
+  const flowExplain = document.getElementById('flowExplain');
+
+  if (phase === 'calm') {
+    flowFuturesLabel.textContent = 'Futures: AM long ← Lev short';
+    flowFuturesLabel.setAttribute('fill', '#4ade80');
+    flowRepoLabel.textContent = 'Repo $$ →';
+    flowRepoLabel.setAttribute('fill', '#fbbf24');
+    flowCashLabel.textContent = 'Cash bonds flow ↔ via dealer market-making';
+    flowCashLabel.setAttribute('fill', '#60a5fa');
+    flowFed.setAttribute('opacity', '0');
+    fedCircle.setAttribute('stroke-width', '2.5');
+    flowExplain.innerHTML = '<strong style="color: var(--text);">Reading this map:</strong> Asset Managers go LONG futures (cheap duration). Leveraged Funds take the other side — SHORT futures — offset by LONG cash bonds. They finance the cash bonds via repo from Dealers. The Fed watches.';
+  } else if (phase === 'warning') {
+    flowFuturesLabel.textContent = 'Futures: AM piling in (flight to quality)';
+    flowFuturesLabel.setAttribute('fill', '#fbbf24');
+    flowRepoLabel.textContent = 'Repo tightening';
+    flowRepoLabel.setAttribute('fill', '#fbbf24');
+    flowCashLabel.textContent = 'Cash bonds: bid/offer widening';
+    flowCashLabel.setAttribute('fill', '#fbbf24');
+    flowFed.setAttribute('opacity', '0');
+    fedCircle.setAttribute('stroke-width', '2.5');
+    flowExplain.innerHTML = '<strong style="color: var(--yellow);">Stress building:</strong> AMs piling into both cash and futures as flight-to-quality. Repo financing getting more expensive. Dealers warning clients. Lev funds still in the trade — for now.';
+  } else if (phase === 'crisis') {
+    flowFuturesLabel.textContent = '🚨 Futures: Lev funds COVERING shorts';
+    flowFuturesLabel.setAttribute('fill', '#ef4444');
+    flowRepoLabel.textContent = '🚨 Repo BROKEN';
+    flowRepoLabel.setAttribute('fill', '#ef4444');
+    flowCashLabel.textContent = '🚨 EVERYONE SELLING — Dealers refuse bids';
+    flowCashLabel.setAttribute('fill', '#ef4444');
+    flowFed.setAttribute('opacity', dat.fed > 50 ? '1' : '0');
+    fedCircle.setAttribute('stroke-width', dat.fed > 50 ? '4' : '2.5');
+    flowExplain.innerHTML = '<strong style="color: var(--red);">The Doom Loop:</strong> AMs need CASH to pay redemptions — they\'re selling bonds. Lev funds need CASH for margin — they\'re selling bonds. Dealers can\'t absorb the flow (balance sheets capped). Cash bonds crater. Basis explodes. Margin calls intensify. Repeat.';
+  } else { // recovery
+    flowFuturesLabel.textContent = 'Futures: Re-normalizing';
+    flowFuturesLabel.setAttribute('fill', '#4ade80');
+    flowRepoLabel.textContent = 'Fed repo lifeline';
+    flowRepoLabel.setAttribute('fill', '#60a5fa');
+    flowCashLabel.textContent = 'Cash bonds healing';
+    flowCashLabel.setAttribute('fill', '#60a5fa');
+    flowFed.setAttribute('opacity', '1');
+    fedCircle.setAttribute('stroke-width', '4');
+    flowExplain.innerHTML = '<strong style="color: var(--blue);">Fed backstop active:</strong> The Fed is buying Treasuries directly from Dealers (the only path that works — Fed cannot trade futures). Dealer balance sheets free up, they can finally bid for AM and Lev fund selling. Basis normalizes. But Lev fund positions are permanently smaller.';
+  }
+}
+
 // ============================================
 // UI UPDATES
 // ============================================
@@ -1236,6 +1734,9 @@ function updateUI() {
 
   // Doom loop visibility
   document.getElementById('doomLoop').style.display = (dat.phase === 'crisis') ? 'block' : 'none';
+
+  // Industry positions
+  updateIndustryPositions(currentDay);
 
   // Summary
   if (currentDay >= 60) {

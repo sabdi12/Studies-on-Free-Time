@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assembling the Cube — A Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+  :root{
+    --ink:#14110f; --ink-soft:#2a2521;
+    --paper:#f4ede1; --paper-dark:#ebe1cf;
+    --accent:#b8442a; --accent-deep:#8a2f1c;
+    --gold:#b8932a; --teal:#2a6b6b; --indigo:#36406b;
+    --rule:#1a1714; --muted:#6b6258; --highlight:#fff3b8;
+    --term-bg:#05070a; --term-amber:#ffb000; --term-green:#33d17a;
+    --term-orange:#ff7a1a; --term-blue:#4ea3ff; --term-grid:#16202c; --term-dim:#7d8da0; --term-red:#ff5f56;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--paper); color:var(--ink); font-family:'Fraunces',Georgia,serif; font-size:18px; line-height:1.65; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 18% 8%, rgba(184,68,42,.05) 0%, transparent 42%),radial-gradient(circle at 85% 78%, rgba(54,64,107,.05) 0%, transparent 42%);}
+  .masthead{border-bottom:3px double var(--rule); padding:46px 60px 30px;}
+  .masthead-row{display:flex; justify-content:space-between; align-items:baseline; font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted);}
+  .masthead-title{font-family:'Fraunces',serif; font-weight:900; font-style:italic; font-size:clamp(44px,7vw,94px); line-height:.92; letter-spacing:-.02em; margin:22px 0 10px;}
+  .masthead-title em{color:var(--accent);}
+  .masthead-subtitle{font-size:21px; font-style:italic; color:var(--ink-soft); max-width:780px; margin-top:8px;}
+  .masthead-byline{margin-top:28px; padding-top:18px; border-top:1px solid var(--rule); font-family:'Inter Tight',sans-serif; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); display:flex; gap:30px; flex-wrap:wrap;}
+  .container{max-width:920px; margin:0 auto; padding:0 32px;}
+  .lead{font-size:22px; line-height:1.55; color:var(--ink-soft); margin:34px 0; font-weight:400;}
+  p{margin:18px 0;}
+  .dropcap::first-letter{font-family:'Fraunces',serif; font-weight:900; font-size:5.2em; float:left; line-height:.78; padding:6px 12px 0 0; color:var(--accent);}
+  .toc{background:var(--paper-dark); border:1px solid var(--rule); padding:30px 36px; margin:46px 0;}
+  .toc h3{font-family:'Inter Tight',sans-serif; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:18px;}
+  .toc ol{list-style:none; counter-reset:toc;}
+  .toc li{counter-increment:toc; padding:7px 0; border-bottom:1px dotted rgba(26,23,20,.2); font-size:16px;}
+  .toc li:last-child{border-bottom:none;}
+  .toc li::before{content:counter(toc,decimal-leading-zero); font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:13px; margin-right:14px; font-weight:700;}
+  .toc a{color:var(--ink); text-decoration:none;}
+  .toc a:hover{color:var(--accent); text-decoration:underline;}
+  .chapter{margin:78px 0 0; padding-top:34px; border-top:1px solid var(--rule);}
+  .chapter-number{font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:.2em; color:var(--accent); font-weight:700; text-transform:uppercase;}
+  .chapter h2{font-family:'Fraunces',serif; font-weight:800; font-size:clamp(30px,4.4vw,46px); line-height:1.04; letter-spacing:-.015em; margin:10px 0 6px;}
+  h3.sub{font-family:'Fraunces',serif; font-weight:700; font-size:25px; margin:42px 0 4px;}
+  h4.sub{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; color:var(--teal); margin:30px 0 2px;}
+  .term{font-style:italic; color:var(--accent-deep); font-weight:500;}
+  strong{font-weight:700;}
+  code{font-family:'JetBrains Mono',monospace; font-size:.86em; background:var(--paper-dark); padding:2px 6px; border-radius:3px; border:1px solid rgba(26,23,20,.12);}
+  .eli5,.intuition,.callout,.warning,.defn,.example{margin:30px 0;}
+  .eli5{background:linear-gradient(135deg,#fff6df,#ffeec2); border:1px solid var(--gold); padding:26px 30px;}
+  .eli5 .callout-label{color:var(--gold);}
+  .intuition{background:rgba(42,107,107,.07); border-left:4px solid var(--teal); padding:22px 28px;}
+  .intuition .callout-label{color:var(--teal);}
+  .callout{background:var(--paper-dark); border-left:4px solid var(--accent); padding:22px 28px;}
+  .callout .callout-label{color:var(--accent);}
+  .warning{background:rgba(184,68,42,.08); border:1px dashed var(--accent-deep); padding:22px 28px;}
+  .warning .callout-label{color:var(--accent-deep);}
+  .callout-label{font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.18em; text-transform:uppercase; font-weight:700; display:block; margin-bottom:10px;}
+  .defn{background:#fff; border:1px solid var(--rule); padding:22px 28px; box-shadow:4px 4px 0 var(--paper-dark);}
+  .defn-word{font-family:'Fraunces',serif; font-weight:800; font-size:22px; font-style:italic;}
+  .defn-pos{font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-left:10px;}
+  .example{background:#fbf6ec; border:1px solid var(--rule); padding:24px 30px;}
+  .example-title{font-family:'Inter Tight',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--indigo); margin-bottom:12px;}
+  ul.clean{margin:16px 0 16px 4px; list-style:none;}
+  ul.clean li{padding:6px 0 6px 24px; position:relative;}
+  ul.clean li::before{content:'▸'; color:var(--accent); position:absolute; left:0; top:6px;}
+  /* DERIVATIONS */
+  .deriv{background:#fff; border:1px solid var(--rule); border-left:4px solid var(--indigo); margin:28px 0; counter-reset:dv; box-shadow:4px 4px 0 var(--paper-dark);}
+  .deriv .dhead{font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700; color:var(--indigo); padding:14px 26px 4px;}
+  .dstep{display:grid; grid-template-columns:30px 1fr; gap:16px; padding:16px 26px; border-top:1px dotted rgba(26,23,20,.15);}
+  .dstep .dnum{counter-increment:dv; font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--indigo); font-size:13px; padding-top:2px;}
+  .dstep .dnum::before{content:counter(dv,decimal-leading-zero);}
+  .dstep .why{font-size:15px; color:var(--muted); font-style:italic; margin-top:8px; line-height:1.5;}
+  .dstep .dbody{overflow-x:auto;}
+  .verify{display:inline-flex; align-items:center; gap:9px; background:rgba(42,107,107,.1); border:1px solid var(--teal); color:var(--teal); font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.03em; padding:7px 14px; border-radius:22px; margin:6px 0 18px;}
+  .verify::before{content:'✓ VERIFIED'; font-weight:700; letter-spacing:.08em;}
+  .equation{background:#fff; border:1px solid var(--rule); padding:18px 24px; margin:26px 0; overflow-x:auto; position:relative;}
+  .equation-label{position:absolute; top:-10px; right:14px; background:var(--accent); color:#fff; font-family:'JetBrains Mono',monospace; font-size:10px; padding:2px 9px; letter-spacing:.1em;}
+  .pullquote{font-family:'Fraunces',serif; font-style:italic; font-weight:500; font-size:30px; line-height:1.3; color:var(--accent-deep); border-top:2px solid var(--rule); border-bottom:2px solid var(--rule); padding:30px 0; margin:48px 0; text-align:center;}
+  .svg-container{background:#fff; border:1px solid var(--rule); padding:24px; margin:28px 0; text-align:center;}
+  .figure-caption{font-family:'Inter Tight',sans-serif; font-size:13px; color:var(--muted); margin-top:14px;}
+  .figure-caption b{color:var(--accent-deep);}
+  /* WORKED EXAMPLE TABLE */
+  table.work{width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:13px; margin:18px 0; background:#fff; border:1px solid var(--rule);}
+  table.work th{background:var(--paper-dark); color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em; font-size:10px; padding:9px 10px; text-align:right; border-bottom:1px solid var(--rule);}
+  table.work td{padding:8px 10px; text-align:right; border-bottom:1px solid rgba(26,23,20,.1);}
+  table.work td.lbl{text-align:left; color:var(--muted);}
+  table.work .hi{color:var(--accent); font-weight:700;}
+  /* TERMINAL LABS */
+  .lab{background:var(--term-bg); border:1px solid #1d2735; border-radius:6px; margin:36px 0; overflow:hidden; box-shadow:0 18px 40px rgba(0,0,0,.28); font-family:'JetBrains Mono',monospace;}
+  .lab-head{display:flex; align-items:center; gap:10px; padding:11px 18px; background:#0c1118; border-bottom:1px solid #1d2735;}
+  .lab-dot{width:10px; height:10px; border-radius:50%;}
+  .lab-head .title{color:var(--term-amber); font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; margin-left:6px;}
+  .lab-head .tag{margin-left:auto; color:var(--term-dim); font-size:10px; letter-spacing:.18em;}
+  .lab-body{padding:22px;}
+  .lab-grid{display:grid; grid-template-columns:1fr 270px; gap:24px;}
+  @media(max-width:760px){.lab-grid{grid-template-columns:1fr;}}
+  .lab canvas{width:100%; height:auto; display:block; background:var(--term-bg); border:1px solid #16202c; border-radius:4px; margin-bottom:10px;}
+  .lab-controls{display:flex; flex-direction:column; gap:14px;}
+  .ctrl label{display:flex; justify-content:space-between; align-items:baseline; color:var(--term-dim); font-size:11px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:5px;}
+  .ctrl label .val{color:var(--term-amber); font-weight:700; font-size:13px; letter-spacing:0;}
+  .ctrl input[type=range]{-webkit-appearance:none; width:100%; height:4px; background:#1d2735; border-radius:3px; outline:none;}
+  .ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--term-orange); cursor:pointer; border:2px solid #0c1118;}
+  .ctrl input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; background:var(--term-orange); cursor:pointer; border:2px solid #0c1118;}
+  .lab-readout{background:#0a0f15; border:1px solid #16202c; border-radius:4px; padding:14px; color:var(--term-green); font-size:12px; line-height:1.7;}
+  .lab-readout .k{color:var(--term-dim);} .lab-readout .v{color:var(--term-amber); font-weight:700;}
+  .lab-note{color:var(--term-dim); font-size:11px; margin-top:14px; line-height:1.6;}
+  .lab-note b{color:var(--term-amber);}
+  .axis-key{display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--term-dim); margin:0 9px;}
+  .swatch{width:14px; height:3px; display:inline-block; border-radius:2px;}
+  .endmark{text-align:center; font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:22px; margin:60px 0 14px;}
+  footer{border-top:3px double var(--rule); padding:34px 60px 70px; margin-top:50px; font-family:'Inter Tight',sans-serif; font-size:13px; color:var(--muted); line-height:1.7;}
+  footer b{color:var(--ink);}
+  .mono{font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-row"><span>Bloomberg L.P. · VCUB &lt;GO&gt;</span><span>The Assembly Line · Field Guide II</span></div>
+  <h1 class="masthead-title">Assembling the <em>Cube</em></h1>
+  <div class="masthead-subtitle">A handful of quotes go in the top. A dense, <em>queryable</em>, <em>arbitrage-aware</em> block of volatility falls out the side. This is the factory floor — every belt, every gear, every safety check.</div>
+  <div class="masthead-byline"><span>The pipeline, end to end</span><span>With a live cube you can query</span><span>And an arbitrage detector</span></div>
+</header>
+
+<div class="container">
+
+  <p class="lead">In the first guide we met each machine on its own — cap stripping, the smile, SABR. Now we bolt them together and ask the two questions the caption quietly buried: what does it actually mean for the cube to be <strong>fully-queryable</strong>, and what stops it from being a contradiction machine — what makes it <strong>arbitrage-aware</strong>? We'll answer both with numbers you can poke.</p>
+
+  <div class="eli5">
+    <span class="callout-label">★ The factory, in one breath</span>
+    <p style="margin-top:0;">Picture a sausage factory, but for volatility. Raw meat (a few dozen market quotes) goes in. It passes down a belt: a grinder (cap stripping), a shaper (the smile), a filler that smooths it into a continuous loaf (expiry/tenor interpolation), and a patcher for the end-bits (lifting/basis/shift). Out the side comes a <strong>solid block</strong> you can slice <em>anywhere</em> — ask it for any expiry, any tenor, any strike, and it hands you a price. And a quality inspector at the end makes sure no two slices ever contradict each other (no free money). That inspector is the "arbitrage-aware" part, and almost nobody explains it. We will.</p>
+  </div>
+
+  <div class="toc">
+    <h3>The route</h3>
+    <ol>
+      <li><a href="#c1">The miracle, counted: how sparse → how dense</a></li>
+      <li><a href="#c2">The assembly line &amp; what flows between stages</a></li>
+      <li><a href="#c3">Stage 1 — Cap stripping, peeled with real numbers</a></li>
+      <li><a href="#c4">Stage 2 — The smile fills the strike axis</a></li>
+      <li><a href="#c5">Stage 3 — Bilinear on moneyness, derived &amp; worked</a></li>
+      <li><a href="#c6">Stage 4 — Lifting, basis &amp; shift: the patchers</a></li>
+      <li><a href="#c7">"Fully-queryable": the cube is a function <span style="color:var(--accent)">[SIMULATION]</span></a></li>
+      <li><a href="#c8">"Arbitrage-aware": the inspector at the end <span style="color:var(--accent)">[SIMULATION]</span></a></li>
+      <li><a href="#c9">The living cube</a></li>
+      <li><a href="#appx">Appendix — the four derivations</a></li>
+    </ol>
+  </div>
+
+  <!-- ===== CH1 ===== -->
+  <section class="chapter" id="c1">
+    <div class="chapter-number">Chapter 01</div>
+    <h2>The miracle, counted</h2>
+    <p class="dropcap">Before admiring the factory, let's measure how much it actually invents. The word "sparse" and the word "dense" only land once you count.</p>
+
+    <p>A typical USD input set, the kind on those ICAP screens:</p>
+    <ul class="clean">
+      <li><strong>~13 cap maturities</strong> × <strong>~5 fixed strikes</strong> + an ATM column ≈ <strong>~80 cap quotes</strong>.</li>
+      <li><strong>~10 swaption expiries</strong> × <strong>~9 tenors</strong> for ATM ≈ <strong>~90 swaption quotes</strong>, plus maybe a sparse OTM grid.</li>
+    </ul>
+    <p>Call it <strong>~200 numbers</strong>. That's the entire raw input. Now count what a trading desk needs to <em>query</em>:</p>
+
+    <div class="example">
+      <div class="example-title">Numerical reality check</div>
+      <p style="margin:0 0 10px;">The three axes are <em>continuous</em>. A single exotic — say a Bermudan swaption — might need vols at dozens of expiries, several tenors, and a whole range of strikes for its calibration. If you discretised the cube even crudely at, say, 40 expiries × 40 tenors × 40 strikes, that's <strong class="mono">64,000</strong> points. In reality the cube must answer for <em>any real number</em> on each axis — uncountably many.</p>
+      <p style="margin:10px 0 0;">So the factory's compression ratio is roughly <strong>200 inputs → ∞ outputs</strong>. Every output beyond the 200 is <em>manufactured</em> — and must not contradict the 200, or each other.</p>
+    </div>
+
+    <div class="pullquote">The cube is not a table of answers. It is a machine that fabricates an answer on demand for a point nobody ever quoted.</div>
+  </section>
+
+  <!-- ===== CH2 ===== -->
+  <section class="chapter" id="c2">
+    <div class="chapter-number">Chapter 02</div>
+    <h2>The assembly line &amp; what flows between stages</h2>
+    <p>Here's the spine again — but this time pay attention to the <strong>shape of the data</strong> changing as it moves down the belt. Each arrow carries a richer object than the one before.</p>
+
+    <div class="svg-container">
+      <svg viewBox="0 0 760 430" width="720" style="max-width:100%">
+        <defs><marker id="fa" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto"><path d="M0,0 L7,4.5 L0,9 Z" fill="#b8442a"/></marker></defs>
+        <g font-family="Inter Tight, sans-serif" font-size="13">
+          <g><rect x="30" y="20" width="250" height="56" rx="4" fill="#fff" stroke="#1a1714"/>
+            <text x="155" y="42" text-anchor="middle" font-weight="700">RAW QUOTES</text>
+            <text x="155" y="60" text-anchor="middle" font-size="11" fill="#6b6258">~200 scattered numbers</text></g>
+          <text x="300" y="44" font-family="JetBrains Mono" font-size="11" fill="#2a6b6b">a sparse point cloud</text>
+          <line x1="155" y1="76" x2="155" y2="100" stroke="#b8442a" stroke-width="2" marker-end="url(#fa)"/>
+
+          <g><rect x="30" y="102" width="250" height="56" rx="4" fill="#fff" stroke="#1a1714"/>
+            <text x="155" y="124" text-anchor="middle" font-weight="700">1 · CAP STRIPPING</text>
+            <text x="155" y="142" text-anchor="middle" font-size="11" fill="#6b6258">term vol → caplet (forward) vol grid</text></g>
+          <text x="300" y="126" font-family="JetBrains Mono" font-size="11" fill="#2a6b6b">+ time axis untangled</text>
+          <line x1="155" y1="158" x2="155" y2="182" stroke="#b8442a" stroke-width="2" marker-end="url(#fa)"/>
+
+          <g><rect x="30" y="184" width="250" height="56" rx="4" fill="#fff" stroke="#1a1714"/>
+            <text x="155" y="206" text-anchor="middle" font-weight="700">2 · SMILE MODEL</text>
+            <text x="155" y="224" text-anchor="middle" font-size="11" fill="#6b6258">discrete strikes → continuous σ(K)</text></g>
+          <text x="300" y="208" font-family="JetBrains Mono" font-size="11" fill="#2a6b6b">+ strike axis filled</text>
+          <line x1="155" y1="240" x2="155" y2="264" stroke="#b8442a" stroke-width="2" marker-end="url(#fa)"/>
+
+          <g><rect x="30" y="266" width="250" height="56" rx="4" fill="#fff" stroke="#1a1714"/>
+            <text x="155" y="288" text-anchor="middle" font-weight="700">3 · EXPIRY/TENOR INTERP</text>
+            <text x="155" y="306" text-anchor="middle" font-size="11" fill="#6b6258">grid of smiles → continuous (T,τ)</text></g>
+          <text x="300" y="290" font-family="JetBrains Mono" font-size="11" fill="#2a6b6b">+ both other axes filled</text>
+          <line x1="155" y1="322" x2="155" y2="346" stroke="#b8442a" stroke-width="2" marker-end="url(#fa)"/>
+
+          <g><rect x="30" y="348" width="250" height="56" rx="4" fill="#fff" stroke="#1a1714"/>
+            <text x="155" y="370" text-anchor="middle" font-weight="700">4 · LIFT / BASIS / SHIFT</text>
+            <text x="155" y="388" text-anchor="middle" font-size="11" fill="#6b6258">patch gaps &amp; corner cases</text></g>
+          <line x1="280" y1="376" x2="470" y2="230" stroke="#b8442a" stroke-width="2.5" marker-end="url(#fa)"/>
+          <text x="350" y="300" font-family="Fraunces" font-style="italic" font-size="15" fill="#b8442a">f(T, τ, K) → σ</text>
+        </g>
+        <!-- cube -->
+        <g transform="translate(500,110)" stroke="#36406b" fill="none" stroke-width="1.5">
+          <rect x="0" y="50" width="150" height="150" fill="rgba(54,64,107,.07)"/>
+          <rect x="55" y="0" width="150" height="150" fill="rgba(184,68,42,.06)"/>
+          <line x1="0" y1="50" x2="55" y2="0"/><line x1="150" y1="50" x2="205" y2="0"/>
+          <line x1="150" y1="200" x2="205" y2="150"/><line x1="0" y1="200" x2="55" y2="150"/>
+        </g>
+        <g transform="translate(500,110)" font-family="JetBrains Mono" font-size="11" fill="#36406b">
+          <text x="-8" y="130" text-anchor="end">strike</text><text x="70" y="222">expiry</text><text x="215" y="14">tenor</text>
+        </g>
+      </svg>
+      <div class="figure-caption"><b>Fig 1.</b> The same pipeline, annotated by what each stage <i>adds</i>. Stage 1 untangles time, Stage 2 fills strike, Stage 3 fills the remaining two axes, Stage 4 patches holes. The output is a callable function.</div>
+    </div>
+
+    <div class="intuition">
+      <span class="callout-label">◈ The key reframe</span>
+      <p style="margin:0;">Don't think of the output as a 3-D <em>table</em>. Think of it as a 3-D <strong>function</strong>: <code>σ = cube(T, τ, K)</code>. The four stages exist solely to make that function defined everywhere, smooth, and consistent. Chapter 7 lets you actually call it.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH3 ===== -->
+  <section class="chapter" id="c3">
+    <div class="chapter-number">Chapter 03</div>
+    <h2>Stage 1 — Cap stripping, peeled with real numbers</h2>
+    <p>The grinder. Market caps quote a single "term" vol per maturity, but each cap secretly contains all the shorter caps' caplets. To get the atomic <span class="term">caplet (forward) vols</span>, we peel: a longer cap minus the shorter cap = just the new caplets.</p>
+
+    <h3 class="sub">Watch the arithmetic, layer by layer</h3>
+    <p>Let's do it with actual numbers. Annual caplets, forward and strike both 3% (ATM), discount factor 1. The market hands us flat cap vols. We price each cap, subtract, and back out the new layer's vol. (Black caplet price uses the formula from Guide I.)</p>
+
+    <table class="work">
+      <tr><th class="lbl" style="text-align:left">maturity</th><th>cap vol (in)</th><th>cap price Σcaplets</th><th>− prev price</th><th>= new layer price</th><th>stripped fwd vol (out)</th></tr>
+      <tr><td class="lbl">1y</td><td>30.0%</td><td>0.003577</td><td>—</td><td>0.003577</td><td class="hi">30.00%</td></tr>
+      <tr><td class="lbl">2y</td><td>28.0%</td><td>0.008049</td><td>0.003577</td><td>0.004472</td><td class="hi">26.57%</td></tr>
+      <tr><td class="lbl">3y</td><td>26.0%</td><td>0.012824</td><td>0.008049</td><td>0.004775</td><td class="hi">23.19%</td></tr>
+      <tr><td class="lbl">4y</td><td>24.5%</td><td>0.017898</td><td>0.012824</td><td>0.005075</td><td class="hi">21.36%</td></tr>
+      <tr><td class="lbl">5y</td><td>23.5%</td><td>0.023395</td><td>0.017898</td><td>0.005496</td><td class="hi">20.72%</td></tr>
+    </table>
+
+    <p>Notice the punchline in the last column: the input cap vols slide gently (30 → 23.5), but the stripped forward vols <strong>fall almost twice as fast</strong> (30 → 20.7). A cap vol is an <em>average</em> over all its caplets; the average always lags the underlying. The stripped value is the real per-period vol the cube stores.</p>
+
+    <div class="verify">these exact numbers reproduced by the Black bootstrap in code.</div>
+
+    <p>The bootstrap that produced the table is a two-line recursion (full derivation in the Appendix):</p>
+    <div class="equation"><span class="equation-label">BOOTSTRAP</span>
+      $$ \underbrace{P_n - P_{n-1}}_{\text{new layer price}} = \sum_{i=n_{\text{prev}}+1}^{n}\!\! p_i(\sigma_n) \;\;\Longrightarrow\;\; \text{solve the one unknown } \sigma_n $$
+    </div>
+  </section>
+
+  <!-- ===== CH4 ===== -->
+  <section class="chapter" id="c4">
+    <div class="chapter-number">Chapter 04</div>
+    <h2>Stage 2 — The smile fills the strike axis</h2>
+    <p>After stripping we have caplet vols at a few <em>strikes</em> for each maturity — still a comb of discrete points. Stage 2 runs a smile model (PWL, CEV, or SABR — see Guide I) to turn that comb into a continuous curve $\sigma(K)$, and to extrapolate sensibly past the last quote.</p>
+
+    <div class="example">
+      <div class="example-title">Numerical example — SABR at one node</div>
+      <p style="margin:0;">Take a 5y caplet, forward $F=3\%$. Fit SABR with $\alpha=0.027,\ \beta=0.5,\ \rho=0,\ \nu=0.45$. It returns, for instance, $\sigma(2\%)\!\approx\!21.5\%$, $\sigma(3\%)\!\approx\!16.9\%$ (ATM), $\sigma(5\%)\!\approx\!19.3\%$ — a full grin from four parameters. The cube now has $\sigma(K)$ for <em>every</em> strike at this node, not just the quoted ones. <span class="mono" style="color:var(--accent)">[matches Guide I's SABR lab]</span></p>
+    </div>
+
+    <p>Do this at every $(T,\tau)$ node and you've filled the entire <strong>strike</strong> axis. Two axes left.</p>
+  </section>
+
+  <!-- ===== CH5 ===== -->
+  <section class="chapter" id="c5">
+    <div class="chapter-number">Chapter 05</div>
+    <h2>Stage 3 — Bilinear on moneyness, derived &amp; worked</h2>
+    <p>Now the filler. We have a smile at each <em>grid</em> node $(T_i,\tau_j)$, but a query lands <em>between</em> nodes. We blend the four surrounding smiles with <span class="term">bilinear interpolation</span> — weighting each corner by how close it is — but evaluated at matching <strong>moneyness</strong>, not absolute strike.</p>
+
+    <h4 class="sub">Deriving the four weights</h4>
+    <div class="deriv">
+      <div class="dhead">Bilinear interpolation from scratch</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Locate the query between grid lines. Define fractional positions along each axis:</div>
+        $$ w_T=\frac{T^*-T_i}{T_{i+1}-T_i},\qquad w_\tau=\frac{\tau^*-\tau_j}{\tau_{j+1}-\tau_j} $$
+        <div class="why">$w_T=0$ means "sitting on the left expiry," $w_T=1$ means "on the right." Just "how far across the box am I."</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Interpolate first in expiry (two blends), then in tenor (one blend). Composing the two linear steps multiplies the fractions:</div>
+        $$ w_{00}=(1-w_T)(1-w_\tau),\;\; w_{10}=w_T(1-w_\tau),\;\; w_{01}=(1-w_T)w_\tau,\;\; w_{11}=w_T w_\tau $$
+        <div class="why">Each weight is the <em>area of the opposite rectangle</em>. The corner diagonally across from you gets the biggest slice — being far from a corner along both axes means that corner barely matters.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>The weights automatically sum to 1 (expand and watch it collapse):</div>
+        $$ \sum w = (1-w_T)(1-w_\tau)+w_T(1-w_\tau)+(1-w_T)w_\tau+w_T w_\tau = 1 $$
+        <div class="why">No leakage — the blend is a true weighted average, so the result always lands between the four corner vols. That's what keeps interpolation from inventing nonsense.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>The moneyness twist: don't read each corner's smile at the raw strike $K^*$. Read it at <em>its own</em> strike that matches the query's distance-from-ATM:</div>
+        $$ K_{ij}-F_{ij}=K^*-F^*\quad\Longrightarrow\quad K_{ij}=F_{ij}+(K^*-F^*) $$
+        <div class="why">A smile cares about "how far out of the money," not the raw rate. If you blended at the same absolute strike, you'd be comparing the ATM region of one corner with the deep wing of another — smearing the skew. Align on moneyness first.</div>
+      </div></div>
+    </div>
+
+    <div class="example">
+      <div class="example-title">Worked example — one query by hand</div>
+      <p style="margin:0 0 8px;">Query <strong>T*=0.7y, τ*=3y</strong>. Grid brackets: expiries 0.5y &amp; 1y, tenors 2y &amp; 5y. Then</p>
+      <p style="margin:6px 0;"><span class="mono">w_T = (0.7−0.5)/(1−0.5) = <strong>0.40</strong>, &nbsp; w_τ = (3−2)/(5−2) = <strong>0.333</strong></span></p>
+      <table class="work">
+        <tr><th class="lbl" style="text-align:left">corner</th><th>weight</th><th>corner σ at matched K</th><th>contribution</th></tr>
+        <tr><td class="lbl">0.5y, 2y</td><td>0.60·0.667 = 0.400</td><td>29.67%</td><td>11.87%</td></tr>
+        <tr><td class="lbl">1y, 2y</td><td>0.40·0.667 = 0.267</td><td>29.30%</td><td>7.81%</td></tr>
+        <tr><td class="lbl">0.5y, 5y</td><td>0.60·0.333 = 0.200</td><td>27.30%</td><td>5.46%</td></tr>
+        <tr><td class="lbl">1y, 5y</td><td>0.40·0.333 = 0.133</td><td>26.94%</td><td>3.59%</td></tr>
+        <tr><td class="lbl hi">blend</td><td class="hi">1.000</td><td></td><td class="hi">= 28.73%</td></tr>
+      </table>
+      <p style="margin:8px 0 0;">That single number is what the cube returns for a point <em>nobody quoted</em> — and the query engine in the next chapter computes exactly this when you set T=0.7y, τ=3y, K=3%.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH6 ===== -->
+  <section class="chapter" id="c6">
+    <div class="chapter-number">Chapter 06</div>
+    <h2>Stage 4 — Lifting, basis &amp; shift: the patchers</h2>
+    <p>Stages 1–3 assume the data is reasonably complete. Real markets are full of holes and quirks; Stage 4 is three patchers that keep the loaf intact (all covered in depth in Guide I, recapped here as <em>where they sit in the line</em>):</p>
+    <ul class="clean">
+      <li><strong>Smile lifting</strong> — when a swaption has an ATM vol but no OTM quotes, borrow a same-expiry caplet's smile <em>shape</em> and re-anchor it. Fills missing smile shapes.</li>
+      <li><strong>Basis model</strong> — when two index tenors (3m vs 6m) carry a stubborn spread, scale Black vol by $1/F$ so absolute wobble stays invariant. Fixes frequency mismatch.</li>
+      <li><strong>Shift / normal space</strong> — when rates go negative, slide everything right (shifted SABR) or switch to normal vol. Keeps the machine legal below zero.</li>
+    </ul>
+    <div class="callout">
+      <span class="callout-label">▲ Why these come last</span>
+      <p style="margin:0;">They're <em>conditional</em> — invoked only when a query hits a hole or a non-standard corner. The healthy interior of the cube never touches them. They're the patch kit, not the main belt.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH7: QUERY ENGINE ===== -->
+  <section class="chapter" id="c7">
+    <div class="chapter-number">Chapter 07</div>
+    <h2>"Fully-queryable": the cube is a function</h2>
+    <p class="dropcap">This is the whole point of the factory, made literal. Below is a small but <strong>real</strong> cube: a 4×4 grid of expiry/tenor nodes, each carrying a forward rate and a SABR smile. The heatmap is the continuous ATM-vol surface the pipeline manufactures from those 16 nodes. Move the sliders to pick <em>any</em> expiry, tenor and strike — even values between the dots — and watch the engine run Stage 3 live: it finds the four brackets (green), weights them, reads each smile at matching moneyness, and returns a single vol and price.</p>
+
+    <div class="lab" id="lab-query">
+      <div class="lab-head">
+        <span class="lab-dot" style="background:#ff5f56"></span><span class="lab-dot" style="background:#ffbd2e"></span><span class="lab-dot" style="background:#27c93f"></span>
+        <span class="title">Cube Query Engine</span><span class="tag">VCUB · σ = f(T,τ,K)</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-grid">
+          <div>
+            <canvas id="gridCanvas" width="720" height="300"></canvas>
+            <div style="text-align:center;margin:2px 0 10px;">
+              <span class="axis-key"><span class="swatch" style="background:#4ea3ff"></span>low vol</span>
+              <span class="axis-key"><span class="swatch" style="background:#ff7a1a"></span>high vol</span>
+              <span class="axis-key"><span class="swatch" style="background:#33d17a;height:8px;width:8px;border-radius:50%"></span>brackets</span>
+              <span class="axis-key"><span class="swatch" style="background:#ff5f56;height:8px;width:8px;border-radius:50%"></span>query</span>
+            </div>
+            <canvas id="qsmileCanvas" width="720" height="220"></canvas>
+            <div style="text-align:center;margin-top:6px;">
+              <span class="axis-key"><span class="swatch" style="background:#ff7a1a"></span>smile at queried (T,τ)</span>
+              <span class="axis-key"><span class="swatch" style="background:#ffb000;height:8px;width:8px;border-radius:50%"></span>your strike</span>
+            </div>
+          </div>
+          <div class="lab-controls" id="queryControls"></div>
+        </div>
+        <div class="lab-readout" id="queryReadout" style="margin-top:8px;"></div>
+        <div class="lab-note">
+          The top panel is the expiry×tenor plane; its colour is the live ATM-vol surface the cube fabricates from just 16 nodes. The bottom panel is the smile the cube returns at <b>your</b> chosen slice. The readout traces the full computation — this <i>is</i> the function call <b>σ = cube(T, τ, K)</b>.
+        </div>
+      </div>
+    </div>
+
+    <div class="intuition">
+      <span class="callout-label">◈ What "queryable" buys you</span>
+      <p style="margin:0;">An exotic-derivative model never asks the market a question. It asks the <em>cube</em> — thousands of times, at oddball points — and trusts that each answer is consistent with the original 200 quotes. The query engine you're playing with is, in miniature, what runs under every exotic valuation on the desk.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH8: ARBITRAGE ===== -->
+  <section class="chapter" id="c8">
+    <div class="chapter-number">Chapter 08</div>
+    <h2>"Arbitrage-aware": the inspector at the end</h2>
+    <p class="dropcap">Here's the phrase nobody explains. A cube can be smooth, dense and queryable and still be <strong>broken</strong> — if its prices secretly let someone make risk-free money. The factory needs a quality inspector. To build one, we need to know what "no free money" means in the language of a smile.</p>
+
+    <h3 class="sub">The deepest free lunch: the butterfly</h3>
+    <p>Buy one call at strike $K-\Delta$, sell two at $K$, buy one at $K+\Delta$. This "butterfly" can never have negative value — its payoff is a little tent that's zero or positive everywhere. So the call price $C(K)$ must be <strong>convex</strong> in strike. And convexity has a stunning consequence, discovered by Breeden &amp; Litzenberger:</p>
+
+    <div class="verify"><b>$\partial^2 C/\partial K^2$ equals the risk-neutral density</b> — reproduced numerically to 4 decimals against the lognormal pdf.</div>
+
+    <div class="deriv">
+      <div class="dhead">Breeden–Litzenberger: the smile hides a probability density</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>A call's value is the expected payoff over the (risk-neutral) density $\phi$ of the future rate $F_T$:</div>
+        $$ C(K) = \int_K^\infty (x-K)\,\phi(x)\,dx $$
+        <div class="why">Sum "how much each outcome pays" times "how likely it is." Only outcomes above $K$ pay.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Differentiate once in $K$ (Leibniz rule — the boundary term vanishes since the integrand is 0 at $x=K$):</div>
+        $$ \frac{\partial C}{\partial K} = -\int_K^\infty \phi(x)\,dx = -\,\Pr(F_T>K) $$
+        <div class="why">The slope of the call-price-vs-strike curve is (minus) the probability of finishing in the money. Already useful — but watch the next step.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Differentiate again — the fundamental theorem of calculus hands you the density itself:</div>
+        $$ \boxed{\;\frac{\partial^2 C}{\partial K^2} = \phi(K)\;} $$
+        <div class="why">The <strong>curvature</strong> of the price-vs-strike curve <em>is</em> the probability density of the rate landing at $K$. The market's smile literally encodes a probability distribution.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>A probability density can never be negative. Therefore the no-arbitrage condition is simply:</div>
+        $$ \frac{\partial^2 C}{\partial K^2} \ge 0 \quad\text{everywhere.} $$
+        <div class="why">If a smile is so curved (or so steep) that the implied density dips below zero, the cube is asserting a "negative probability" — pure nonsense, and an exploitable arbitrage. That's the inspector's red light.</div>
+      </div></div>
+    </div>
+
+    <h3 class="sub">See the inspector catch it</h3>
+    <p>Below: a smile (top) and the probability density the cube is implicitly claiming (bottom), computed by twice-differentiating the call price. Drag <strong>analyst tweak</strong> to bend the smile — a little is fine, but bend it too hard and the density plunges below zero into the red <em>arbitrage</em> zone. This is exactly the check that makes a cube "arbitrage-aware."</p>
+
+    <div class="lab" id="lab-arb">
+      <div class="lab-head">
+        <span class="lab-dot" style="background:#ff5f56"></span><span class="lab-dot" style="background:#ffbd2e"></span><span class="lab-dot" style="background:#27c93f"></span>
+        <span class="title">Butterfly Arbitrage Detector</span><span class="tag">BREEDEN–LITZENBERGER</span>
+      </div>
+      <div class="lab-body">
+        <div class="lab-grid">
+          <div>
+            <canvas id="arbSmileCanvas" width="720" height="220"></canvas>
+            <div style="text-align:center;margin:2px 0 10px;"><span class="axis-key"><span class="swatch" style="background:#ff7a1a"></span>implied vol smile σ(K)</span></div>
+            <canvas id="arbDensCanvas" width="720" height="240"></canvas>
+            <div style="text-align:center;margin-top:6px;"><span class="axis-key"><span class="swatch" style="background:#33d17a"></span>implied density ∂²C/∂K²</span><span class="axis-key"><span class="swatch" style="background:#ff5f56"></span>negative = arbitrage</span></div>
+          </div>
+          <div class="lab-controls" id="arbControls"></div>
+        </div>
+        <div class="lab-readout" id="arbReadout" style="margin-top:8px;"></div>
+        <div class="lab-note">
+          The bottom curve is the probability density the smile implies. A clean SABR smile keeps it positive (a healthy bell). Crank <b>analyst tweak</b> and the density dips below zero — the cube would be claiming a negative probability, i.e. free money. Even legitimate models (SABR with very high ν, or aggressive low-strike wings) can trip this, which is why real cubes monitor it.
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">The other inspector: calendar arbitrage</h3>
+    <p>There's a second free lunch across <em>time</em>. A longer-dated option must cost at least as much as a shorter-dated one (more time = more chance to pay off). In vol language, the <strong>total implied variance</strong> $w = \sigma^2 T$ must never decrease as expiry grows, at fixed moneyness:</p>
+    <div class="equation"><span class="equation-label">CALENDAR</span>
+      $$ \frac{\partial}{\partial T}\big[\sigma^2(T)\,T\big] \ge 0 $$
+    </div>
+    <div class="intuition">
+      <span class="callout-label">◈ Why variance, not vol</span>
+      <p style="margin:0;">Vol itself can fall with maturity (long-dated vols are often lower) — that's fine. What can't happen is <em>total accumulated uncertainty</em> $\sigma^2 T$ going backwards, because uncertainty only piles up with time. The cube's flat-in-time extrapolation (Guide I, Ch 9) respects this: holding $\sigma$ flat makes $\sigma^2T$ strictly increasing.</p>
+    </div>
+
+    <div class="warning">
+      <span class="callout-label">⚠ Honest limits</span>
+      <p style="margin:0;">"Arbitrage-aware" does not mean "provably arbitrage-free everywhere." SABR's asymptotic formula is famous for admitting tiny butterfly arbitrage in extreme low-strike wings — the very reason shifted/normal SABR and density monitors exist. The cube's job is to stay consistent with the quoted region and flag trouble outside it, not to be perfect at $\pm\infty$.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH9 ===== -->
+  <section class="chapter" id="c9">
+    <div class="chapter-number">Chapter 09</div>
+    <h2>The living cube</h2>
+    <p>One last reframe. The cube is not built once and shelved — it's <strong>recalibrated continuously</strong> as quotes tick. Every refresh re-runs the whole assembly line: re-strip, re-fit smiles, re-interpolate, re-check arbitrage. The 200 inputs change by a basis point; the entire manufactured interior shifts to stay consistent.</p>
+
+    <p>So when a trader pulls up <code>VCUB &lt;GO&gt;</code> and reads a vol for some bespoke 7-month-into-3.6-year swaption struck 40bp out of the money, they're reading the live output of this exact pipeline — stripped, smiled, blended on moneyness, patched if needed, and silently inspected for free lunches. A few raisins; a whole cake; and an inspector making sure every bite agrees.</p>
+
+    <div class="pullquote">Sparse in. Dense out. Callable anywhere. Contradicting nowhere. That is the cube.</div>
+  </section>
+
+  <!-- ===== APPENDIX ===== -->
+  <section class="chapter" id="appx">
+    <div class="chapter-number">Appendix</div>
+    <h2>The four derivations</h2>
+
+    <h4 class="sub">A · The cap-stripping bootstrap</h4>
+    <div class="deriv">
+      <div class="dhead">From "caps contain caps" to a one-unknown solve</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>A cap of maturity $T_n$ is the sum of all its caplets; a shorter cap $T_{n-1}$ is a subset. Subtract:</div>
+        $$ P_n(K)-P_{n-1}(K)=\sum_{t_i=T_{n-1}}^{t_i<T_n} p_i(K) $$
+        <div class="why">Everything the two caps share cancels, leaving only the caplets in the new time band.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Assume those new caplets share one (piecewise-constant) vol $\sigma_n$. Then the right side is a known function of a single unknown:</div>
+        $$ P_n-P_{n-1}=\sum_{i} p_i(K,\sigma_n) $$
+        <div class="why">One equation, one unknown ⇒ invert (bisection on $\sigma_n$). March $n=1,2,3,\dots$ and you've stripped the whole curve — the Chapter 3 table.</div>
+      </div></div>
+    </div>
+
+    <h4 class="sub">B · Bilinear weights</h4>
+    <p>Derived in Chapter 5: $w_{ij}$ are products of the axis fractions $w_T,w_\tau$, equal to the area of the opposite sub-rectangle, and sum to 1. The moneyness alignment $K_{ij}=F_{ij}+(K^*-F^*)$ ensures corners are compared at equal distance-from-ATM.</p>
+
+    <h4 class="sub">C · Breeden–Litzenberger</h4>
+    <p>Derived in Chapter 8: writing the call as $\int_K^\infty(x-K)\phi(x)dx$ and differentiating twice in $K$ gives $\partial^2C/\partial K^2=\phi(K)$. Non-negativity of $\phi$ is the no-butterfly condition. (With discounting, $\partial^2C/\partial K^2 = e^{-rT}\phi(K)$ — same sign test.)</p>
+
+    <h4 class="sub">D · The calendar condition</h4>
+    <div class="deriv">
+      <div class="dhead">Why total variance must rise</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>At fixed moneyness, a longer option dominates a shorter one (it can do everything the shorter can, plus more time):</div>
+        $$ C(T_2)\ge C(T_1)\quad\text{for }T_2>T_1 $$
+        <div class="why">More time can only add optionality, never remove it — else buy the long, sell the short, pocket the difference.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>In Black terms the price depends on $T$ only through total variance $w=\sigma^2T$. Monotone price ⇒ monotone variance:</div>
+        $$ \frac{\partial}{\partial T}\big(\sigma^2 T\big)\ge 0 $$
+        <div class="why">Flat-in-time vol extrapolation (constant $\sigma$) gives $\partial_T(\sigma^2T)=\sigma^2>0$ automatically — which is exactly why the cube extrapolates flat in expiry.</div>
+      </div></div>
+    </div>
+
+    <div class="pullquote">Every belt, every gear, every safety check — now nothing left as magic.</div>
+  </section>
+
+  <div class="endmark">◆ ◆ ◆</div>
+</div>
+
+<footer>
+  <p><b>About this guide.</b> A deep dive on the <em>assembly pipeline</em> behind Bloomberg's <code>VCUB</code> Volatility Cube — how sparse quotes become a dense, queryable, arbitrage-aware surface. Companion to "The Volatility Cube" field guide; after the white paper by Levin &amp; Zhang (Bloomberg) and Hagan's SABR work.</p>
+  <p><b>The simulations are real.</b> The query engine runs a genuine bilinear-on-moneyness blend over a SABR-smiled 4×4 node grid; the arbitrage detector computes the implied density by numerically twice-differentiating Black call prices (Breeden–Litzenberger). Numbers are illustrative — discount factors set to 1, schedules simplified — so don't trade off them.</p>
+  <p style="color:var(--accent-deep);font-style:italic;">Slice it anywhere. It will not contradict itself.</p>
+</footer>
+
+<script>
+/* ===================== SHARED MATH ===================== */
+function ncdf(x){const t=1/(1+0.2316419*Math.abs(x));const d=0.3989422804014327*Math.exp(-x*x/2);
+let p=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return x>0?1-p:p;}
+function blackCall(F,K,sig,T){if(sig<=0||T<=0)return Math.max(F-K,0);const v=sig*Math.sqrt(T);
+const d1=(Math.log(F/K)+0.5*v*v)/v,d2=d1-v;return F*ncdf(d1)-K*ncdf(d2);}
+function sabr(F,K,T,a,b,rho,nu){if(F<=0||K<=0)return NaN;const l=Math.log(F/K),fkb=Math.pow(F*K,(1-b)/2);
+let z=(nu/a)*fkb*l,xz;if(Math.abs(z)<1e-9)xz=1;else xz=z/Math.log((Math.sqrt(1-2*rho*z+z*z)+z-rho)/(1-rho));
+const den=fkb*(1+Math.pow(1-b,2)/24*l*l+Math.pow(1-b,4)/1920*Math.pow(l,4));
+return a/den*xz*(1+(Math.pow(1-b,2)/24*a*a/Math.pow(F*K,1-b)+0.25*rho*b*nu*a/fkb+(2-3*rho*rho)/24*nu*nu)*T);}
+function dprSetup(c,hRatio){const r=c.getBoundingClientRect(); const d=window.devicePixelRatio||1;
+  const want=Math.round(r.width*d); if(c.width!==want){c.width=want; c.height=Math.round(r.width*d*hRatio);}
+  const ctx=c.getContext('2d'); ctx.setTransform(d,0,0,d,0,0); return {ctx,W:c.width/d,H:c.height/d};}
+function axes(ctx,W,H,pad,xmin,xmax,ymin,ymax,xlab,ylab,xfmt,yfmt){
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#7d8da0'; ctx.font="11px 'JetBrains Mono', monospace";
+  const px=v=>pad.l+(v-xmin)/(xmax-xmin)*(W-pad.l-pad.r);
+  const py=v=>H-pad.b-(v-ymin)/(ymax-ymin)*(H-pad.t-pad.b);
+  for(let i=0;i<=4;i++){const gy=ymin+(ymax-ymin)*i/4; ctx.strokeStyle='#16202c'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.l,py(gy)); ctx.lineTo(W-pad.r,py(gy)); ctx.stroke();
+    ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(yfmt(gy),pad.l-6,py(gy));}
+  for(let i=0;i<=5;i++){const gx=xmin+(xmax-xmin)*i/5; ctx.strokeStyle='#11171f';
+    ctx.beginPath(); ctx.moveTo(px(gx),pad.t); ctx.lineTo(px(gx),H-pad.b); ctx.stroke();
+    ctx.fillStyle='#7d8da0'; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(xfmt(gx),px(gx),H-pad.b+5);}
+  ctx.fillStyle='#7d8da0'; ctx.textAlign='center'; ctx.fillText(xlab,(pad.l+W-pad.r)/2,H-12);
+  ctx.save(); ctx.translate(13,(pad.t+H-pad.b)/2); ctx.rotate(-Math.PI/2); ctx.fillText(ylab,0,0); ctx.restore();
+  return {px,py};}
+function line(ctx,pts,color,w,dash){ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=w||2; ctx.setLineDash(dash||[]);
+  ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); ctx.restore();}
+function dot(ctx,x,y,r,color){ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();}
+function heatColor(v,lo,hi){let t=Math.max(0,Math.min(1,(v-lo)/(hi-lo)));
+  const c0=[78,163,255], c1=[255,122,26];
+  return `rgb(${Math.round(c0[0]+(c1[0]-c0[0])*t)},${Math.round(c0[1]+(c1[1]-c0[1])*t)},${Math.round(c0[2]+(c1[2]-c0[2])*t)})`;}
+
+/* ===================== CUBE MODEL (shared by query engine) ===================== */
+const EXPS=[0.5,1,2,5], TENS=[1,2,5,10];
+function fwd(T,tau){return 0.022+0.0015*Math.log(1+tau)+0.001*Math.log(1+T);}
+function alphaNode(T,tau){return Math.max(0.005, 0.05-0.001*tau-0.0015*T);}
+function nodeVol(T,tau,K){return sabr(fwd(T,tau),K,Math.max(T,0.05),alphaNode(T,tau),0.5,0,0.45);}
+function bracket(arr,x){let i=0;for(let k=0;k<arr.length-1;k++)if(x>=arr[k])i=k;return i;}
+function cubeQuery(Tq,tauq,Kq){
+  const i=bracket(EXPS,Tq), j=bracket(TENS,tauq);
+  const T0=EXPS[i],T1=EXPS[i+1],t0=TENS[j],t1=TENS[j+1];
+  const wT=(Tq-T0)/(T1-T0), wt=(tauq-t0)/(t1-t0);
+  const corners=[[T0,t0,(1-wT)*(1-wt)],[T1,t0,wT*(1-wt)],[T0,t1,(1-wT)*wt],[T1,t1,wT*wt]];
+  const Fq=corners.reduce((s,c)=>s+c[2]*fwd(c[0],c[1]),0);
+  const m=Kq-Fq;
+  let v=0; const detail=corners.map(c=>{const Fc=fwd(c[0],c[1]); const Kc=Fc+m;
+    const sv=nodeVol(c[0],c[1],Kc); v+=c[2]*sv; return {T:c[0],tau:c[1],w:c[2],Fc,Kc,sv};});
+  return {v,Fq,m,corners,detail,T0,T1,t0,t1,wT,wt};
+}
+
+/* ===================== LAB: QUERY ENGINE ===================== */
+(function(){
+  let q={T:0.7,tau:3,K:0.03};
+  const defs=[['T','expiry T (years)',0.5,5,0.05],['tau','tenor τ (years)',1,10,0.1],['K','strike K',0.012,0.06,0.0005]];
+  const ctrls=document.getElementById('queryControls');
+  defs.forEach(([key,lab,mn,mx,st])=>{const d=document.createElement('div');d.className='ctrl';
+    d.innerHTML=`<label>${lab} <span class="val" id="qq_${key}"></span></label><input type="range" min="${mn}" max="${mx}" step="${st}" value="${q[key]}" id="qqi_${key}">`;
+    ctrls.appendChild(d);
+    d.querySelector('input').addEventListener('input',e=>{q[key]=+e.target.value;draw();});});
+  const gC=document.getElementById('gridCanvas'), sC=document.getElementById('qsmileCanvas');
+  // expiry-tenor mapping (log expiry for nicer spread)
+  const pad={l:54,r:18,t:16,b:40};
+  function gx(W,T){return pad.l+(Math.log(T)-Math.log(0.5))/(Math.log(5)-Math.log(0.5))*(W-pad.l-pad.r);}
+  function gy(H,tau){return H-pad.b-(tau-1)/(10-1)*(H-pad.t-pad.b);}
+  function drawGrid(){
+    const {ctx,W,H}=dprSetup(gC,300/720);
+    ctx.clearRect(0,0,W,H);
+    // heatmap (coarse offscreen for speed)
+    const cols=90,rows=46; const img=ctx.createImageData(cols,rows);
+    for(let r=0;r<rows;r++)for(let cI=0;cI<cols;cI++){
+      const T=Math.exp(Math.log(0.5)+(cI/(cols-1))*(Math.log(5)-Math.log(0.5)));
+      const tau=1+(1-r/(rows-1))*(10-1);
+      const res=cubeQuery(T,tau,fwd(T,tau)); // ATM vol
+      const col=heatColor(res.v,0.13,0.40); const m=col.match(/\d+/g);
+      const idx=(r*cols+cI)*4; img.data[idx]=+m[0];img.data[idx+1]=+m[1];img.data[idx+2]=+m[2];img.data[idx+3]=235;}
+    // blit scaled into plot area
+    const tmp=document.createElement('canvas');tmp.width=cols;tmp.height=rows;tmp.getContext('2d').putImageData(img,0,0);
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(tmp,pad.l,pad.t,W-pad.l-pad.r,H-pad.t-pad.b);
+    // grid nodes
+    EXPS.forEach(T=>TENS.forEach(tau=>{ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.arc(gx(W,T),gy(H,tau),2.5,0,7);ctx.fill();}));
+    // brackets
+    const res=cubeQuery(q.T,q.tau,q.K);
+    res.corners.forEach(c=>{dot(ctx,gx(W,c[0]),gy(H,c[1]),5,'#33d17a');
+      ctx.fillStyle='#04240f';ctx.font="9px 'JetBrains Mono'";ctx.textAlign='center';ctx.fillText((c[2]*100).toFixed(0),gx(W,c[0]),gy(H,c[1])+3);});
+    // query
+    dot(ctx,gx(W,q.T),gy(H,q.tau),6,'#ff5f56');
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(gx(W,q.T),gy(H,q.tau),9,0,7);ctx.stroke();
+    // axes labels
+    ctx.fillStyle='#cfd8e3';ctx.font="11px 'JetBrains Mono'";ctx.textAlign='center';ctx.textBaseline='top';
+    [0.5,1,2,5].forEach(T=>ctx.fillText(T+'y',gx(W,T),H-pad.b+5));
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    [1,2,5,10].forEach(tau=>ctx.fillText(tau+'y',pad.l-6,gy(H,tau)));
+    ctx.fillStyle='#7d8da0';ctx.textAlign='center';ctx.fillText('expiry T',(pad.l+W-pad.r)/2,H-13);
+    ctx.save();ctx.translate(12,(pad.t+H-pad.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText('tenor τ',0,0);ctx.restore();
+  }
+  function drawSmile(){
+    const {ctx,W,H}=dprSetup(sC,220/720);
+    const A=axes(ctx,W,H,{l:54,r:18,t:14,b:38},0.012,0.06,0.08,0.40,'strike K','vol σ',
+      v=>(v*100).toFixed(0)+'%',v=>(v*100).toFixed(0)+'%');
+    let pts=[];for(let K=0.013;K<=0.06;K+=0.0004){const v=cubeQuery(q.T,q.tau,K).v;if(v>0&&v<1)pts.push([A.px(K),A.py(v)]);}
+    line(ctx,pts,'#ff7a1a',2.6);
+    const res=cubeQuery(q.T,q.tau,q.K);
+    // ATM marker (forward)
+    dot(ctx,A.px(res.Fq),A.py(cubeQuery(q.T,q.tau,res.Fq).v),3.5,'#7d8da0');
+    dot(ctx,A.px(q.K),A.py(res.v),5,'#ffb000');
+    ctx.strokeStyle='#ffb000';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(A.px(q.K),A.py(0.08));ctx.lineTo(A.px(q.K),A.py(res.v));ctx.stroke();ctx.setLineDash([]);
+  }
+  function draw(){
+    document.getElementById('qq_T').textContent=q.T.toFixed(2)+'y';
+    document.getElementById('qq_tau').textContent=q.tau.toFixed(1)+'y';
+    document.getElementById('qq_K').textContent=(q.K*100).toFixed(2)+'%';
+    drawGrid(); drawSmile();
+    const r=cubeQuery(q.T,q.tau,q.K);
+    const price=blackCall(r.Fq,q.K,r.v,q.T)*1e4; // bp of notional (per-unit, undiscounted)
+    document.getElementById('queryReadout').innerHTML=
+      `<span class="k">brackets</span> T∈[<span class="v">${r.T0}y,${r.T1}y</span>] τ∈[<span class="v">${r.t0}y,${r.t1}y</span>] &nbsp; <span class="k">w_T</span>=<span class="v">${r.wT.toFixed(2)}</span> <span class="k">w_τ</span>=<span class="v">${r.wt.toFixed(2)}</span><br>
+       <span class="k">interp forward F</span> <span class="v">${(r.Fq*100).toFixed(3)}%</span> &nbsp; <span class="k">moneyness K−F</span> <span class="v">${(r.m*1e4).toFixed(0)}bp</span><br>`+
+      r.detail.map(d=>`<span class="k">${d.T}y·${d.tau}y</span> w=<span class="v">${(d.w*100).toFixed(0)}%</span> σ(K=${(d.Kc*100).toFixed(2)}%)=<span style="color:#cfd8e3">${(d.sv*100).toFixed(2)}%</span>`).join('<br>')+
+      `<br><span class="k">────────────</span><br><span class="k">σ = cube(T,τ,K)</span> <span class="v" style="font-size:16px">${(r.v*100).toFixed(2)}%</span> &nbsp; <span class="k">→ premium</span> <span class="v">${price.toFixed(1)} bp</span>`;
+  }
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ===================== LAB: ARBITRAGE DETECTOR ===================== */
+(function(){
+  const F=0.03,T=2;
+  let nu=0.45, tweak=0.0;
+  const ctrls=document.getElementById('arbControls');
+  [['nu','ν vol-of-vol',0,1.0,0.05,0.45],['tweak','analyst tweak',0,0.12,0.005,0]].forEach(([key,lab,mn,mx,st,init])=>{
+    const d=document.createElement('div');d.className='ctrl';
+    d.innerHTML=`<label>${lab} <span class="val" id="ab_${key}">${init}</span></label><input type="range" min="${mn}" max="${mx}" step="${st}" value="${init}" id="abi_${key}">`;
+    ctrls.appendChild(d);
+    d.querySelector('input').addEventListener('input',e=>{const val=+e.target.value;
+      if(key==='nu')nu=val; else tweak=val;
+      document.getElementById('ab_'+key).textContent=val.toFixed(key==='tweak'?3:2);draw();});
+  });
+  function smileVol(K){const base=sabr(F,K,T,0.027,0.5,-0.1,nu);
+    return base + tweak*Math.exp(-Math.pow((K-0.03)/0.004,2));}
+  function call(K){return blackCall(F,K,smileVol(K),T);}
+  const dK=2e-4;
+  function dens(K){return (call(K+dK)-2*call(K)+call(K-dK))/(dK*dK);}
+  const sC=document.getElementById('arbSmileCanvas'), dC=document.getElementById('arbDensCanvas');
+  function draw(){
+    // smile panel
+    {const {ctx,W,H}=dprSetup(sC,220/720);
+     const A=axes(ctx,W,H,{l:54,r:18,t:14,b:38},0.012,0.05,0.1,0.45,'strike K','vol σ',v=>(v*100).toFixed(0)+'%',v=>(v*100).toFixed(0)+'%');
+     let pts=[];for(let K=0.013;K<=0.05;K+=0.0003)pts.push([A.px(K),A.py(smileVol(K))]);
+     line(ctx,pts,'#ff7a1a',2.6); dot(ctx,A.px(F),A.py(smileVol(F)),4,'#ffb000');}
+    // density panel
+    let minD=1e9, minK=0; const vals=[];
+    for(let K=0.013;K<=0.05;K+=0.0003){const dval=dens(K);vals.push([K,dval]);if(dval<minD){minD=dval;minK=K;}}
+    const dmax=Math.max(60,...vals.map(v=>v[1])), dmin=Math.min(-20,minD);
+    {const {ctx,W,H}=dprSetup(dC,240/720);
+     const A=axes(ctx,W,H,{l:54,r:18,t:14,b:38},0.012,0.05,dmin,dmax,'strike K','density',v=>(v*100).toFixed(0)+'%',v=>v.toFixed(0));
+     // negative zone shading
+     ctx.fillStyle='rgba(255,95,86,.12)'; const y0=A.py(0);
+     ctx.fillRect(A.px(0.012),y0,A.px(0.05)-A.px(0.012),A.py(dmin)-y0);
+     line(ctx,[[A.px(0.012),y0],[A.px(0.05),y0]],'#ff5f56',1,[5,4]);
+     // density curve, colored by sign
+     for(let i=1;i<vals.length;i++){const a=vals[i-1],b=vals[i];
+       line(ctx,[[A.px(a[0]),A.py(a[1])],[A.px(b[0]),A.py(b[1])]], (a[1]<0||b[1]<0)?'#ff5f56':'#33d17a',2.4);}
+     if(minD<0){dot(ctx,A.px(minK),A.py(minD),5,'#ff5f56');}
+    }
+    document.getElementById('arbReadout').innerHTML=
+      `<span class="k">min implied density</span> <span class="v" style="color:${minD<0?'#ff5f56':'#33d17a'}">${minD.toFixed(1)}</span> at K=<span class="v">${(minK*100).toFixed(2)}%</span><br>`+
+      (minD<0
+        ? `<span style="color:#ff5f56;font-weight:700">↯ BUTTERFLY ARBITRAGE — negative probability. Cube would be rejected here.</span>`
+        : `<span style="color:#33d17a">✓ density ≥ 0 everywhere — no butterfly arbitrage. Cube is consistent.</span>`);
+  }
+  window.addEventListener('resize',draw); draw();
+})();
+</script>
+</body>
+</html>

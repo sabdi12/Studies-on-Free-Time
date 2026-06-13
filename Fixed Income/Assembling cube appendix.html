@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nothing Skipped — Every Number, By Hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+  :root{
+    --ink:#14110f; --ink-soft:#2a2521;
+    --paper:#f4ede1; --paper-dark:#ebe1cf;
+    --accent:#b8442a; --accent-deep:#8a2f1c;
+    --gold:#b8932a; --teal:#2a6b6b; --indigo:#36406b;
+    --rule:#1a1714; --muted:#6b6258; --highlight:#fff3b8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--paper); color:var(--ink); font-family:'Fraunces',Georgia,serif; font-size:18px; line-height:1.65; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 18% 8%, rgba(184,68,42,.05) 0%, transparent 42%),radial-gradient(circle at 85% 78%, rgba(54,64,107,.05) 0%, transparent 42%);}
+  .masthead{border-bottom:3px double var(--rule); padding:46px 60px 30px;}
+  .masthead-row{display:flex; justify-content:space-between; align-items:baseline; font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted);}
+  .masthead-title{font-family:'Fraunces',serif; font-weight:900; font-style:italic; font-size:clamp(40px,7vw,88px); line-height:.92; letter-spacing:-.02em; margin:22px 0 10px;}
+  .masthead-title em{color:var(--accent);}
+  .masthead-subtitle{font-size:21px; font-style:italic; color:var(--ink-soft); max-width:800px; margin-top:8px;}
+  .masthead-byline{margin-top:28px; padding-top:18px; border-top:1px solid var(--rule); font-family:'Inter Tight',sans-serif; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); display:flex; gap:30px; flex-wrap:wrap;}
+  .container{max-width:920px; margin:0 auto; padding:0 32px;}
+  .lead{font-size:22px; line-height:1.55; color:var(--ink-soft); margin:34px 0; font-weight:400;}
+  p{margin:18px 0;}
+  .dropcap::first-letter{font-family:'Fraunces',serif; font-weight:900; font-size:5.2em; float:left; line-height:.78; padding:6px 12px 0 0; color:var(--accent);}
+  .toc{background:var(--paper-dark); border:1px solid var(--rule); padding:30px 36px; margin:46px 0;}
+  .toc h3{font-family:'Inter Tight',sans-serif; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:18px;}
+  .toc ol{list-style:none; counter-reset:toc;}
+  .toc li{counter-increment:toc; padding:7px 0; border-bottom:1px dotted rgba(26,23,20,.2); font-size:16px;}
+  .toc li:last-child{border-bottom:none;}
+  .toc li::before{content:counter(toc,decimal-leading-zero); font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:13px; margin-right:14px; font-weight:700;}
+  .toc a{color:var(--ink); text-decoration:none;}
+  .toc a:hover{color:var(--accent); text-decoration:underline;}
+  .chapter{margin:78px 0 0; padding-top:34px; border-top:1px solid var(--rule);}
+  .chapter-number{font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:.2em; color:var(--accent); font-weight:700; text-transform:uppercase;}
+  .chapter h2{font-family:'Fraunces',serif; font-weight:800; font-size:clamp(28px,4.4vw,44px); line-height:1.04; letter-spacing:-.015em; margin:10px 0 6px;}
+  h3.sub{font-family:'Fraunces',serif; font-weight:700; font-size:25px; margin:42px 0 4px;}
+  h4.sub{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; color:var(--teal); margin:30px 0 2px;}
+  .term{font-style:italic; color:var(--accent-deep); font-weight:500;}
+  strong{font-weight:700;}
+  code{font-family:'JetBrains Mono',monospace; font-size:.86em; background:var(--paper-dark); padding:2px 6px; border-radius:3px; border:1px solid rgba(26,23,20,.12);}
+  .eli5,.intuition,.callout,.warning,.defn,.example{margin:30px 0;}
+  .eli5{background:linear-gradient(135deg,#fff6df,#ffeec2); border:1px solid var(--gold); padding:26px 30px;}
+  .eli5 .callout-label{color:var(--gold);}
+  .intuition{background:rgba(42,107,107,.07); border-left:4px solid var(--teal); padding:22px 28px;}
+  .intuition .callout-label{color:var(--teal);}
+  .callout{background:var(--paper-dark); border-left:4px solid var(--accent); padding:22px 28px;}
+  .callout .callout-label{color:var(--accent);}
+  .warning{background:rgba(184,68,42,.08); border:1px dashed var(--accent-deep); padding:22px 28px;}
+  .warning .callout-label{color:var(--accent-deep);}
+  .callout-label{font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.18em; text-transform:uppercase; font-weight:700; display:block; margin-bottom:10px;}
+  .defn{background:#fff; border:1px solid var(--rule); padding:22px 28px; box-shadow:4px 4px 0 var(--paper-dark);}
+  .defn-word{font-family:'Fraunces',serif; font-weight:800; font-size:22px; font-style:italic;}
+  .example{background:#fbf6ec; border:1px solid var(--rule); padding:24px 30px;}
+  .example-title{font-family:'Inter Tight',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--indigo); margin-bottom:12px;}
+  ul.clean{margin:16px 0 16px 4px; list-style:none;}
+  ul.clean li{padding:6px 0 6px 24px; position:relative;}
+  ul.clean li::before{content:'▸'; color:var(--accent); position:absolute; left:0; top:6px;}
+  /* DERIVATIONS */
+  .deriv{background:#fff; border:1px solid var(--rule); border-left:4px solid var(--indigo); margin:28px 0; counter-reset:dv; box-shadow:4px 4px 0 var(--paper-dark);}
+  .deriv .dhead{font-family:'Inter Tight',sans-serif; font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700; color:var(--indigo); padding:14px 26px 4px;}
+  .dstep{display:grid; grid-template-columns:30px 1fr; gap:16px; padding:16px 26px; border-top:1px dotted rgba(26,23,20,.15);}
+  .dstep .dnum{counter-increment:dv; font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--indigo); font-size:13px; padding-top:2px;}
+  .dstep .dnum::before{content:counter(dv,decimal-leading-zero);}
+  .dstep .why{font-size:15px; color:var(--muted); font-style:italic; margin-top:8px; line-height:1.5;}
+  .dstep .dbody{overflow-x:auto;}
+  .equation{background:#fff; border:1px solid var(--rule); padding:18px 24px; margin:26px 0; overflow-x:auto; position:relative;}
+  .equation-label{position:absolute; top:-10px; right:14px; background:var(--accent); color:#fff; font-family:'JetBrains Mono',monospace; font-size:10px; padding:2px 9px; letter-spacing:.1em;}
+  .pullquote{font-family:'Fraunces',serif; font-style:italic; font-weight:500; font-size:28px; line-height:1.3; color:var(--accent-deep); border-top:2px solid var(--rule); border-bottom:2px solid var(--rule); padding:30px 0; margin:48px 0; text-align:center;}
+  /* ARITHMETIC LADDER — the by-hand number crunch */
+  .ladder{background:#0c1118; border:1px solid #1d2735; border-radius:6px; margin:24px 0; padding:18px 22px; font-family:'JetBrains Mono',monospace; font-size:13.5px; line-height:1.95; color:#cfd8e3; overflow-x:auto;}
+  .ladder .cm{color:#7d8da0;}            /* comment */
+  .ladder .hl{color:#ffb000; font-weight:700;}  /* highlighted result */
+  .ladder .op{color:#ff7a1a;}            /* operator/keyword */
+  .ladder .gn{color:#33d17a;}            /* good/green number */
+  .ladder .lbl-top{display:block; color:#ffb000; font-size:10px; letter-spacing:.16em; text-transform:uppercase; margin-bottom:10px; font-weight:700;}
+  /* WORKED TABLE */
+  table.work{width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:12.5px; margin:18px 0; background:#fff; border:1px solid var(--rule);}
+  table.work th{background:var(--paper-dark); color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; font-size:9.5px; padding:9px 8px; text-align:right; border-bottom:1px solid var(--rule);}
+  table.work td{padding:8px 8px; text-align:right; border-bottom:1px solid rgba(26,23,20,.1);}
+  table.work td.lbl{text-align:left; color:var(--muted);}
+  table.work .hi{color:var(--accent); font-weight:700;}
+  table.work tr.total td{border-top:2px solid var(--rule); font-weight:700;}
+  .verify{display:inline-flex; align-items:center; gap:9px; background:rgba(42,107,107,.1); border:1px solid var(--teal); color:var(--teal); font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.03em; padding:7px 14px; border-radius:22px; margin:6px 0 18px;}
+  .verify::before{content:'✓ RECOMPUTED IN CODE'; font-weight:700; letter-spacing:.06em;}
+  .endmark{text-align:center; font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:22px; margin:60px 0 14px;}
+  footer{border-top:3px double var(--rule); padding:34px 60px 70px; margin-top:50px; font-family:'Inter Tight',sans-serif; font-size:13px; color:var(--muted); line-height:1.7;}
+  footer b{color:var(--ink);}
+  .mono{font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-row"><span>Bloomberg L.P. · VCUB &lt;GO&gt;</span><span>The Assembly Line · Field Guide II½</span></div>
+  <h1 class="masthead-title">Nothing <em>Skipped</em></h1>
+  <div class="masthead-subtitle">The companion that refuses to wave its hands. Every cap price built one caplet at a time. Every SABR vol plugged into the formula. Every corner of the blend, derived. The arithmetic the other guides put behind a curtain — pulled into the light, slowly, for someone seeing it the first time.</div>
+  <div class="masthead-byline"><span>Treat me like a beginner</span><span>Leave out no step</span><span>Every number recomputed in code</span></div>
+</header>
+
+<div class="container">
+
+  <p class="lead">The main guide showed you the <em>answers</em>: a table of stripped vols, a blend that lands on 28.73%, a density that stays positive. But it kept saying things like "it returns, for instance" and "the engine computes exactly this" — and never showed the multiplication. If you've never seen the moves, that's not a derivation, it's a magic trick. This guide is the magician turning his sleeves inside out.</p>
+
+  <div class="eli5">
+    <span class="callout-label">★ What "every step" means here</span>
+    <p style="margin-top:0;">Imagine someone hands you a finished cake and says "obviously, flour plus eggs." You can't bake from that. You need: crack <em>this</em> egg, into <em>this</em> bowl, whisk for <em>this</em> long. That's the difference between a formula and a worked example. Below, every box that says <strong class="mono" style="color:var(--accent)">ARITHMETIC</strong> is the actual cracking-of-eggs: numbers going in, one operation per line, until a number falls out. No line assumes you already know the trick. If a step feels too small — good. That's the point.</p>
+  </div>
+
+  <div class="toc">
+    <h3>The four curtains we pull back</h3>
+    <ol>
+      <li><a href="#c0">First, the engine: what <span class="mono">N(d)</span> and the Black formula actually do</a></li>
+      <li><a href="#c1">Skip #1 — pricing ONE caplet, digit by digit</a></li>
+      <li><a href="#c2">Skip #2 — cap stripping: the whole table, built and solved</a></li>
+      <li><a href="#c3">Skip #3 — SABR at one node, plugged into the formula</a></li>
+      <li><a href="#c4">Skip #4 — the bilinear blend: where the corner vols come from</a></li>
+      <li><a href="#c5">Bonus — Breeden–Litzenberger: the differentiation, in full</a></li>
+    </ol>
+  </div>
+
+  <!-- ===== CH0: THE ENGINE ===== -->
+  <section class="chapter" id="c0">
+    <div class="chapter-number">Detour 00 · before any of it</div>
+    <h2>The engine that everything rides on</h2>
+    <p class="dropcap">Two of the four skips (cap stripping and the final premium) call the same little engine over and over: the <span class="term">Black formula</span> for the price of an option. You cannot follow the cap-stripping table without it, so we build it first, from the ground, assuming you've never met it.</p>
+
+    <p>An interest-rate <span class="term">caplet</span> is a tiny insurance policy: "if the rate $F$ ends up above a strike $K$, pay me the difference; otherwise pay me nothing." Its payoff is $\max(F-K,\,0)$. The fair price today is the <em>average</em> of that payoff over every future the rate might take. Black's 1976 model assumes the rate's future is <strong>lognormal</strong> (it can drift up or down by percentages, never below zero), and under that one assumption the average has a closed form:</p>
+
+    <div class="equation"><span class="equation-label">BLACK '76</span>
+      $$ C = F\,N(d_1) - K\,N(d_2),\qquad d_1=\frac{\ln(F/K)+\tfrac12\sigma^2T}{\sigma\sqrt{T}},\qquad d_2=d_1-\sigma\sqrt{T} $$
+    </div>
+
+    <div class="defn">
+      <span class="defn-word">Every symbol, named</span>
+      <ul class="clean" style="margin-bottom:0;">
+        <li><strong>$F$</strong> — the <em>forward rate</em>: the market's best guess today of what the rate will be. Our examples use $F=3\%=0.03$.</li>
+        <li><strong>$K$</strong> — the <em>strike</em>: the level in the contract. "At the money" (ATM) means $K=F$.</li>
+        <li><strong>$\sigma$</strong> — the <em>volatility</em>: how much the rate wobbles, per year. This is the one number the whole cube exists to produce.</li>
+        <li><strong>$T$</strong> — <em>time to expiry</em> in years.</li>
+        <li><strong>$N(\cdot)$</strong> — the <em>standard normal CDF</em>: $N(x)$ is "the probability a standard bell-curve draw lands below $x$." $N(0)=0.5$ (half the bell is left of centre); $N(\infty)=1$; $N(-\infty)=0$. It has no elementary formula, so code approximates it — but you only ever need to <em>look it up</em>.</li>
+      </ul>
+    </div>
+
+    <div class="intuition">
+      <span class="callout-label">◈ How to <em>read</em> the formula (not just compute it)</span>
+      <p style="margin:0;">$F\,N(d_1)$ is roughly "the rate, weighted by how likely we are to collect." $K\,N(d_2)$ is "the strike we'll pay, weighted by how likely we pay it." The price is the gap. $d_1$ and $d_2$ are just $F$ and $K$ translated onto the bell curve's ruler (how many standard deviations from the money are we?). When $K=F$ (ATM) and there's no drift, $d_1$ and $d_2$ sit symmetrically around zero — you'll see exactly that in the next chapter.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH1: ONE CAPLET ===== -->
+  <section class="chapter" id="c1">
+    <div class="chapter-number">Skip #1</div>
+    <h2>Pricing one caplet, digit by digit</h2>
+    <p>The original guide's stripping table opens with the 1-year cap priced at <code>0.003577</code> and never shows where that came from. A 1-year annual cap is just <em>one</em> caplet, so this is the cleanest possible Black calculation. Forward and strike both 3% (ATM), one year out, vol 30%, discount factor 1.</p>
+
+    <div class="deriv">
+      <div class="dhead">Black, plugged in — F=K=3%, σ=30%, T=1</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>First the "total volatility" over the life of the option, $v=\sigma\sqrt{T}$:</div>
+        $$ v = 0.30\times\sqrt{1} = 0.30 $$
+        <div class="why">Vol is quoted <em>per year</em>; over $T$ years uncertainty grows like $\sqrt{T}$ (variances add, so std-devs add in quadrature). Here $T=1$, so $v=\sigma$.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Now $d_1$. Since $K=F$, the log term $\ln(F/K)=\ln(1)=0$ — it vanishes, leaving only the drift-correction $\tfrac12 v^2$:</div>
+        $$ d_1=\frac{0+\tfrac12(0.30)^2}{0.30}=\frac{0.045}{0.30}=0.15 $$
+        <div class="why">That $\tfrac12\sigma^2$ is the famous lognormal "convexity" nudge — it's why an ATM option isn't perfectly symmetric.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>And $d_2$ is just $d_1$ minus the total vol:</div>
+        $$ d_2 = 0.15 - 0.30 = -0.15 $$
+        <div class="why">$d_1$ and $d_2$ straddle zero symmetrically ($+0.15$ and $-0.15$) — the signature of an ATM, zero-drift option.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Look up the normal CDF at each (this is the only "table lookup"; code uses the Abramowitz–Stegun approximation):</div>
+        $$ N(0.15)=0.559618,\qquad N(-0.15)=0.440382 $$
+        <div class="why">Notice they sum to 1: being 0.15 above centre is exactly as likely as being 0.15 below. $N(0.15)-0.5=0.0596$ is "the little extra above the coin-flip."</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Assemble:</div>
+        $$ C = 0.03\times0.559618 - 0.03\times0.440382 = 0.03\,(0.559618-0.440382) = 0.03\times0.119236 $$
+        $$ \boxed{\,C = 0.00357706\,} $$
+        <div class="why">Rounded to six places that's <code>0.003577</code> — the first number in the stripping table, no longer a mystery.</div>
+      </div></div>
+    </div>
+
+    <div class="ladder">
+      <span class="lbl-top">arithmetic · the same five lines as a calculator would</span>
+v   <span class="op">=</span> 0.30 * sqrt(1)            <span class="cm">→ 0.300000</span>
+d1  <span class="op">=</span> (0 + 0.5*0.30^2) / 0.30   <span class="cm">→ 0.045 / 0.30 = 0.150000</span>
+d2  <span class="op">=</span> 0.15 - 0.30              <span class="cm">→ -0.150000</span>
+N(d1)<span class="op">=</span> 0.559618 ,  N(d2) <span class="op">=</span> 0.440382
+C   <span class="op">=</span> 0.03*0.559618 - 0.03*0.440382  <span class="op">=</span> <span class="hl">0.00357706</span>
+    </div>
+    <div class="verify">caplet@30% = 0.00357706</div>
+  </section>
+
+  <!-- ===== CH2: STRIPPING ===== -->
+  <section class="chapter" id="c2">
+    <div class="chapter-number">Skip #2</div>
+    <h2>Cap stripping: the whole table, built and solved</h2>
+    <p>Now the big one. The table in the main guide has five rows of finished numbers. Underneath each row are <em>two</em> things it never shows: how the cap price is <strong>assembled</strong> from individual caplets, and how the stripped vol is <strong>solved for</strong>. We do both.</p>
+
+    <h3 class="sub">The idea in one sentence</h3>
+    <p>A cap is a <em>bundle</em> of caplets — one for each reset date. A 3-year annual cap = caplet at year 1 + caplet at year 2 + caplet at year 3. Crucially, when the market quotes a single "3-year cap vol" of 26%, it means "price <em>all three</em> caplets at 26%." So:</p>
+
+    <div class="equation"><span class="equation-label">CAP = SUM OF CAPLETS</span>
+      $$ \text{Cap}(T_n) \;=\; \sum_{i=1}^{n} \text{caplet}\big(t_i,\ \sigma_n^{\text{term}}\big) $$
+    </div>
+
+    <h4 class="sub">Step A — assemble each cap price</h4>
+    <p>Each cap is priced at its <em>own</em> flat term vol (the market quote). The 2-year cap prices <em>both</em> its caplets at 28%; the 3-year cap prices <em>all three</em> at 26%; and so on. Every caplet below is a Black calculation exactly like Chapter 1 — same $F=K=3\%$, just different $\sigma$ and $T=t_i$.</p>
+
+    <table class="work">
+      <tr><th class="lbl" style="text-align:left">cap</th><th>term vol</th><th>caplet @t=1</th><th>@t=2</th><th>@t=3</th><th>@t=4</th><th>@t=5</th><th>= cap price (Σ)</th></tr>
+      <tr><td class="lbl">1y</td><td>30.0%</td><td>0.003577</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="hi">0.003577</td></tr>
+      <tr><td class="lbl">2y</td><td>28.0%</td><td>0.003340</td><td>0.004708</td><td>—</td><td>—</td><td>—</td><td class="hi">0.008049</td></tr>
+      <tr><td class="lbl">3y</td><td>26.0%</td><td>0.003103</td><td>0.004376</td><td>0.005345</td><td>—</td><td>—</td><td class="hi">0.012824</td></tr>
+      <tr><td class="lbl">4y</td><td>24.5%</td><td>0.002925</td><td>0.004126</td><td>0.005041</td><td>0.005806</td><td>—</td><td class="hi">0.017898</td></tr>
+      <tr><td class="lbl">5y</td><td>23.5%</td><td>0.002806</td><td>0.003959</td><td>0.004838</td><td>0.005574</td><td>0.006217</td><td class="hi">0.023395</td></tr>
+    </table>
+    <p style="font-size:15px;color:var(--muted);font-style:italic;margin-top:6px;">Read across row "3y": all three caplets priced at 26%, then summed → 0.012824. Notice the <em>same caplet maturity</em> (say @t=2) gets a different price in each row, because each row uses a different term vol. That's the whole reason stripping is needed.</p>
+
+    <h4 class="sub">Step B — peel off each new layer</h4>
+    <p>The new caplet introduced at maturity $n$ is the <em>difference</em> between consecutive cap prices. Everything the two caps share cancels:</p>
+    <div class="equation"><span class="equation-label">PEEL</span>
+      $$ \text{new layer}_n = \text{Cap}(T_n)-\text{Cap}(T_{n-1}) $$
+    </div>
+    <div class="ladder">
+      <span class="lbl-top">arithmetic · subtract consecutive cap prices</span>
+layer 1  <span class="op">=</span> 0.003577 - 0          <span class="op">=</span> <span class="hl">0.003577</span>
+layer 2  <span class="op">=</span> 0.008049 - 0.003577   <span class="op">=</span> <span class="hl">0.004472</span>
+layer 3  <span class="op">=</span> 0.012824 - 0.008049   <span class="op">=</span> <span class="hl">0.004775</span>
+layer 4  <span class="op">=</span> 0.017898 - 0.012824   <span class="op">=</span> <span class="hl">0.005075</span>
+layer 5  <span class="op">=</span> 0.023395 - 0.017898   <span class="op">=</span> <span class="hl">0.005496</span>
+    </div>
+
+    <div class="callout">
+      <span class="callout-label">▲ The subtle bit nobody states out loud</span>
+      <p style="margin:0;">Layer 2's price (0.004472) is what the year-2 caplet is worth <em>after</em> the peel. But in Step A, the year-2 caplet inside the 2y cap was priced at <strong>28%</strong> and came to 0.004708. Those disagree — on purpose. The peel mixes a 28%-priced cap with a 30%-priced cap, so the leftover (0.004472) corresponds to neither quote. Step C asks: <em>what single vol makes a standalone year-2 caplet worth exactly 0.004472?</em> That answer is the stripped forward vol.</p>
+    </div>
+
+    <h4 class="sub">Step C — solve for the stripped vol (one unknown)</h4>
+    <p>We have the layer's price and we want its vol. Black's formula can't be turned inside-out algebraically, so we <span class="term">invert it numerically</span> by <strong>bisection</strong>: guess a vol, price the caplet, see if it's too high or too low, halve the gap, repeat. Here's the actual hunt for layer 2's vol (target price 0.004472, single caplet at $t=2$):</p>
+
+    <div class="deriv">
+      <div class="dhead">Bisection on σ — narrowing onto layer 2's vol</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Bracket the answer between a low and high guess, then test the midpoint:</div>
+        <table class="work" style="margin:6px 0;">
+          <tr><th class="lbl" style="text-align:left">iteration</th><th>σ guess</th><th>caplet price</th><th>vs target 0.004472</th></tr>
+          <tr><td class="lbl">0</td><td>25.50%</td><td>0.004293</td><td>too low → raise floor</td></tr>
+          <tr><td class="lbl">1</td><td>37.75%</td><td>0.006314</td><td>too high → lower ceiling</td></tr>
+          <tr><td class="lbl">2</td><td>31.63%</td><td>0.005308</td><td>too high → lower ceiling</td></tr>
+          <tr><td class="lbl">3</td><td>28.56%</td><td>0.004802</td><td>too high → lower ceiling</td></tr>
+          <tr><td class="lbl">4</td><td>27.03%</td><td>0.004548</td><td>too high → lower ceiling</td></tr>
+          <tr><td class="lbl">5</td><td>26.27%</td><td>0.004420</td><td>too low → raise floor</td></tr>
+          <tr><td class="lbl">6</td><td>26.65%</td><td>0.004484</td><td>too high → lower ceiling</td></tr>
+          <tr class="total"><td class="lbl hi">converges</td><td class="hi">26.57%</td><td class="hi">0.004471</td><td class="hi">✓ matches</td></tr>
+        </table>
+        <div class="why">Each step halves the uncertainty. After ~7 halvings we're inside a basis point of vol; a few more and it's exact to machine precision. This is the "solve the one unknown $\sigma_n$" the appendix mentioned — that <em>is</em> the solving.</div>
+      </div></div>
+    </div>
+
+    <h4 class="sub">The finished table — now every column earned</h4>
+    <table class="work">
+      <tr><th class="lbl" style="text-align:left">maturity</th><th>cap vol (in)</th><th>cap price Σ</th><th>− prev</th><th>= new layer</th><th>stripped fwd vol (out)</th></tr>
+      <tr><td class="lbl">1y</td><td>30.0%</td><td>0.003577</td><td>—</td><td>0.003577</td><td class="hi">30.00%</td></tr>
+      <tr><td class="lbl">2y</td><td>28.0%</td><td>0.008049</td><td>0.003577</td><td>0.004472</td><td class="hi">26.57%</td></tr>
+      <tr><td class="lbl">3y</td><td>26.0%</td><td>0.012824</td><td>0.008049</td><td>0.004775</td><td class="hi">23.19%</td></tr>
+      <tr><td class="lbl">4y</td><td>24.5%</td><td>0.017898</td><td>0.012824</td><td>0.005075</td><td class="hi">21.36%</td></tr>
+      <tr><td class="lbl">5y</td><td>23.5%</td><td>0.023395</td><td>0.017898</td><td>0.005496</td><td class="hi">20.72%</td></tr>
+    </table>
+    <div class="verify">all five layers reproduced; bisection trace is the live solver's actual path</div>
+    <p>Row 1 is free: a 1-year cap is one caplet, so its stripped vol <em>equals</em> its cap vol (30%). Every later row peels, then bisects. And the punchline survives the full working: cap vols slide 30 → 23.5, but stripped vols fall almost twice as fast, 30 → 20.7 — because a cap vol is an average that lags the per-period truth underneath.</p>
+  </section>
+
+  <!-- ===== CH3: SABR ===== -->
+  <section class="chapter" id="c3">
+    <div class="chapter-number">Skip #3</div>
+    <h2>SABR at one node, plugged into the formula</h2>
+    <p>The main guide says SABR "returns, for instance, $\sigma(2\%)\approx21.5\%$" and moves on. Where? SABR doesn't simulate anything live — it uses <strong>Hagan's closed-form approximation</strong>, an explicit (if intimidating) formula. We'll write it out, name every piece, then grind the three example strikes through it.</p>
+
+    <div class="equation"><span class="equation-label">HAGAN '02 (lognormal)</span>
+      $$ \sigma(K)=\frac{\alpha}{(FK)^{\frac{1-\beta}{2}}\Big[1+\frac{(1-\beta)^2}{24}\ell^2+\frac{(1-\beta)^4}{1920}\ell^4\Big]}\cdot\frac{z}{x(z)}\cdot\big[1+\Lambda\,T\big] $$
+      $$ \ell=\ln\tfrac{F}{K},\quad z=\frac{\nu}{\alpha}(FK)^{\frac{1-\beta}{2}}\ell,\quad x(z)=\ln\!\frac{\sqrt{1-2\rho z+z^2}+z-\rho}{1-\rho} $$
+      $$ \Lambda=\frac{(1-\beta)^2}{24}\frac{\alpha^2}{(FK)^{1-\beta}}+\frac{\rho\beta\nu\alpha}{4(FK)^{\frac{1-\beta}{2}}}+\frac{2-3\rho^2}{24}\nu^2 $$
+    </div>
+
+    <div class="defn">
+      <span class="defn-word">The pieces, in plain words</span>
+      <ul class="clean" style="margin-bottom:0;">
+        <li>The big fraction $\alpha/(FK)^{\dots}[\dots]$ is the <strong>ATM backbone</strong> — the vol level right at the money.</li>
+        <li>$z/x(z)$ is the <strong>skew/smile bender</strong>. At the money $\ell=0\Rightarrow z=0$ and $z/x(z)\to1$ (no bend). Away from the money it lifts the wings.</li>
+        <li>$[1+\Lambda T]$ is a small <strong>time correction</strong> — here it's about $+8.5\%$ and nearly constant across strikes.</li>
+        <li>Our node: $F=3\%,\ \alpha=0.027,\ \beta=0.5,\ \rho=0,\ \nu=0.45,\ T=5$. With $\rho=0$ the middle term of $\Lambda$ drops out.</li>
+      </ul>
+    </div>
+
+    <h4 class="sub">Strike-by-strike, every intermediate shown</h4>
+    <p>$x(z)$ looks scary but it's just "the curvy correction"; when $z=0$ it equals 1. Watch all four ingredients ($\ell$, $z$, $x(z)$, backbone denominator, $\Lambda T$) for each strike:</p>
+
+    <table class="work">
+      <tr><th class="lbl" style="text-align:left">strike K</th><th>ℓ=ln(F/K)</th><th>(FK)^((1−β)/2)</th><th>z</th><th>x(z)</th><th>z/x(z)</th><th>backbone den</th><th>1+ΛT</th><th>σ(K)</th></tr>
+      <tr><td class="lbl">2%</td><td>+0.40547</td><td>0.156508</td><td>1.05765</td><td>1.14768</td><td>0.92156</td><td>0.156777</td><td>1.08593</td><td class="hi">21.46%</td></tr>
+      <tr><td class="lbl">3% (ATM)</td><td>0.00000</td><td>0.173205</td><td>0.00000</td><td>1.00000</td><td>1.00000</td><td>0.173205</td><td>1.08564</td><td class="hi">16.92%</td></tr>
+      <tr><td class="lbl">5%</td><td>−0.51083</td><td>0.196799</td><td>−1.67550</td><td>1.30052</td><td>0.77562</td><td>0.197334</td><td>1.08536</td><td class="hi">19.31%</td></tr>
+    </table>
+
+    <p>Take the ATM row ($K=3\%$) where everything simplifies, and assemble it by hand:</p>
+    <div class="ladder">
+      <span class="lbl-top">arithmetic · ATM strike, K = F = 3%</span>
+ℓ        <span class="op">=</span> ln(0.03/0.03) <span class="op">=</span> 0          <span class="cm">→ smile bender off</span>
+(FK)^.25 <span class="op">=</span> (0.03*0.03)^0.25         <span class="cm">→ 0.173205</span>
+z        <span class="op">=</span> (0.45/0.027)*0.173205*0   <span class="op">=</span> 0
+z/x(z)   <span class="op">=</span> 1                          <span class="cm">→ no bend at the money</span>
+backbone <span class="op">=</span> 0.027 / 0.173205           <span class="op">=</span> 0.155884
+ΛT       <span class="op">=</span> [(0.25/24)*0.027^2/0.03 + (2/24)*0.45^2] * 5  <span class="op">=</span> 0.08564
+σ(3%)    <span class="op">=</span> 0.155884 * 1 * 1.08564     <span class="op">=</span> <span class="hl">0.1692  (16.92%)</span>
+    </div>
+    <div class="verify">σ(2%)=21.46%, σ(3%)=16.92%, σ(5%)=19.31% — the main guide's ≈21.5 / 16.9 / 19.3</div>
+
+    <div class="intuition">
+      <span class="callout-label">◈ Why the smile is a smile</span>
+      <p style="margin:0;">Look at the $z/x(z)$ column: it's 0.92 at $K{=}2\%$, exactly 1.00 at the money, 0.78 at $K{=}5\%$ — but the backbone denominator <em>grows</em> with $K$. The two effects fight, and the result is high–low–high across strikes: <strong>21.5% → 16.9% → 19.3%</strong>. That up-down-up is the grin. Four parameters, and the whole curve falls out of one formula evaluated at each strike.</p>
+    </div>
+  </section>
+
+  <!-- ===== CH4: BILINEAR ===== -->
+  <section class="chapter" id="c4">
+    <div class="chapter-number">Skip #4</div>
+    <h2>The bilinear blend: where the corner vols come from</h2>
+    <p>This is the worst offender. The main guide's worked example lists "corner σ at matched K" as 29.67%, 29.30%, 27.30%, 26.94% — as if read off a shelf. They are not. Each is a <em>fresh SABR evaluation</em> at a strike that's different for every corner. Here's the entire chain for the query <strong>T*=0.7y, τ*=3y, K=3%</strong>.</p>
+
+    <h4 class="sub">Stage 1 — the four weights (the easy part the guide did show)</h4>
+    <div class="ladder">
+      <span class="lbl-top">arithmetic · fractional position in the grid box</span>
+brackets: expiry in [0.5, 1] ,  tenor in [2, 5]
+w_T   <span class="op">=</span> (0.7 - 0.5)/(1 - 0.5)  <span class="op">=</span> 0.2/0.5  <span class="op">=</span> <span class="hl">0.4000</span>
+w_tau <span class="op">=</span> (3 - 2)/(5 - 2)      <span class="op">=</span> 1/3      <span class="op">=</span> <span class="hl">0.3333</span>
+
+corner weights (product of opposite-side fractions):
+  (0.5y,2y) <span class="op">=</span> (1-0.4)(1-0.3333) <span class="op">=</span> 0.60 * 0.6667 <span class="op">=</span> <span class="hl">0.4000</span>
+  (1y ,2y) <span class="op">=</span>   0.4  *(1-0.3333) <span class="op">=</span> 0.40 * 0.6667 <span class="op">=</span> <span class="hl">0.2667</span>
+  (0.5y,5y) <span class="op">=</span> (1-0.4)* 0.3333    <span class="op">=</span> 0.60 * 0.3333 <span class="op">=</span> <span class="hl">0.2000</span>
+  (1y ,5y) <span class="op">=</span>   0.4  * 0.3333    <span class="op">=</span> 0.40 * 0.3333 <span class="op">=</span> <span class="hl">0.1333</span>
+  sum <span class="op">=</span> 1.0000  <span class="cm">✓</span>
+    </div>
+
+    <h4 class="sub">Stage 2 — the interpolated forward and the moneyness (the skipped middle)</h4>
+    <p>Before reading any smile, the engine blends the four <em>corner forwards</em> (each from the cube's forward curve $F=0.022+0.0015\ln(1{+}\tau)+0.001\ln(1{+}T)$) into one query forward $F^*$, then measures how far the strike sits from it:</p>
+    <div class="ladder">
+      <span class="lbl-top">arithmetic · query forward and moneyness</span>
+corner forwards:  F(0.5,2)=2.4053%  F(1,2)=2.4341%  F(0.5,5)=2.5093%  F(1,5)=2.5381%
+F* <span class="op">=</span> 0.4000*2.4053 + 0.2667*2.4341 + 0.2000*2.5093 + 0.1333*2.5381
+   <span class="op">=</span> <span class="hl">2.4515%</span>
+moneyness  m <span class="op">=</span> K - F* <span class="op">=</span> 3.0000% - 2.4515% <span class="op">=</span> <span class="hl">+54.8 bp</span>
+    </div>
+    <div class="callout">
+      <span class="callout-label">▲ The moneyness twist, made concrete</span>
+      <p style="margin:0;">We do <em>not</em> read every corner's smile at K=3%. We read each at <em>its own</em> strike that sits +54.8bp above <em>its own</em> forward, so all four are compared at equal distance-from-ATM. That's why each corner gets a different matched strike $K_{ij}=F_{ij}+m$ below.</p>
+    </div>
+
+    <h4 class="sub">Stage 3 — each corner's SABR vol at its matched strike</h4>
+    <p>Now the four "shelf" numbers are manufactured: take each corner's forward, add 54.8bp to get its matched strike, and run the Hagan formula from Chapter 3 (each node has its own $\alpha=\max(0.005,\,0.05-0.001\tau-0.0015T)$, with $\beta{=}0.5,\rho{=}0,\nu{=}0.45$).</p>
+
+    <table class="work">
+      <tr><th class="lbl" style="text-align:left">corner (T, τ)</th><th>weight w</th><th>corner fwd F<sub>ij</sub></th><th>matched K<sub>ij</sub>=F+54.8bp</th><th>SABR σ at K<sub>ij</sub></th><th>contribution w·σ</th></tr>
+      <tr><td class="lbl">0.5y, 2y</td><td>0.4000</td><td>2.4053%</td><td>2.9538%</td><td>29.67%</td><td>11.87%</td></tr>
+      <tr><td class="lbl">1y, 2y</td><td>0.2667</td><td>2.4341%</td><td>2.9826%</td><td>29.30%</td><td>7.81%</td></tr>
+      <tr><td class="lbl">0.5y, 5y</td><td>0.2000</td><td>2.5093%</td><td>3.0578%</td><td>27.30%</td><td>5.46%</td></tr>
+      <tr><td class="lbl">1y, 5y</td><td>0.1333</td><td>2.5381%</td><td>3.0866%</td><td>26.94%</td><td>3.59%</td></tr>
+      <tr class="total"><td class="lbl hi">blend</td><td class="hi">1.0000</td><td></td><td></td><td></td><td class="hi">= 28.73%</td></tr>
+    </table>
+
+    <div class="ladder">
+      <span class="lbl-top">arithmetic · the final weighted sum</span>
+σ* <span class="op">=</span> 11.87 + 7.81 + 5.46 + 3.59  <span class="op">=</span> <span class="hl">28.73%</span>
+premium <span class="op">=</span> Black(F*=2.4515%, K=3%, σ=28.73%, T=0.7) * 10000  <span class="op">=</span> <span class="hl">7.3 bp</span>
+    </div>
+    <div class="verify">corners 29.67 / 29.30 / 27.30 / 26.94 → blend 28.73%, premium 7.3bp</div>
+    <p>Now the table in the main guide is fully sourced: the weights came from the box geometry, the matched strikes came from one shared moneyness, and the four vols came from four separate runs of the Hagan formula. Nothing was on a shelf.</p>
+  </section>
+
+  <!-- ===== CH5: BREEDEN-LITZENBERGER ===== -->
+  <section class="chapter" id="c5">
+    <div class="chapter-number">Bonus</div>
+    <h2>Breeden–Litzenberger: the differentiation, in full</h2>
+    <p>The main guide differentiates the call price twice and lands on "$\partial^2C/\partial K^2=\phi(K)$," but the two differentiation steps each hide a calculus move (the <span class="term">Leibniz rule</span> for differentiating an integral whose limit contains the variable). Here are both moves, slowly.</p>
+
+    <div class="deriv">
+      <div class="dhead">From expected payoff to a probability density</div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Start: the call is the average payoff over the density $\phi$ of the future rate. Only outcomes above $K$ pay $(x-K)$:</div>
+        $$ C(K)=\int_K^\infty (x-K)\,\phi(x)\,dx $$
+        <div class="why">"Sum, over every possible future rate $x$, of how much it pays times how likely it is."</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Differentiate in $K$. Leibniz says: when $K$ appears <em>both</em> in the lower limit and inside the integrand, you get a boundary term plus an interior term:</div>
+        $$ \frac{dC}{dK}=\underbrace{-(x-K)\phi(x)\Big|_{x=K}}_{\text{boundary}}\;+\;\int_K^\infty \frac{\partial}{\partial K}(x-K)\,\phi(x)\,dx $$
+        <div class="why">The boundary term comes from the moving limit; the interior term from $K$ inside the integrand. Handle each.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>The boundary term <strong>vanishes</strong>: at $x=K$ the factor $(x-K)=0$. The interior derivative is $\partial_K(x-K)=-1$. So:</div>
+        $$ \frac{dC}{dK}=0+\int_K^\infty(-1)\,\phi(x)\,dx=-\int_K^\infty\phi(x)\,dx=-\Pr(F_T>K) $$
+        <div class="why">The slope of price-vs-strike is (minus) the probability of finishing in the money. Half-way there.</div>
+      </div></div>
+      <div class="dstep"><div class="dnum"></div><div class="dbody">
+        <div>Differentiate again. Now $K$ sits only in the lower limit of $\int_K^\infty\phi\,dx$. The fundamental theorem of calculus: $\frac{d}{dK}\int_K^\infty\phi=-\phi(K)$. With the leading minus sign:</div>
+        $$ \frac{d^2C}{dK^2}=-\big(-\phi(K)\big)=\boxed{\;\phi(K)\;} $$
+        <div class="why">The <strong>curvature</strong> of price-vs-strike <em>is</em> the probability density. A density can't be negative, so $\partial^2C/\partial K^2\ge0$ everywhere — that's the no-butterfly-arbitrage law.</div>
+      </div></div>
+    </div>
+
+    <h4 class="sub">Believe it numerically</h4>
+    <p>Take a clean lognormal ($F=3\%,\ \sigma=20\%,\ T=2$). Compute $\partial^2C/\partial K^2$ by the finite-difference $\big(C(K{+}h)-2C(K)+C(K{-}h)\big)/h^2$ and compare to the lognormal density formula. They should agree:</p>
+    <table class="work">
+      <tr><th class="lbl" style="text-align:left">strike K</th><th>∂²C/∂K² (finite difference)</th><th>lognormal pdf φ(K)</th><th>match</th></tr>
+      <tr><td class="lbl">2%</td><td>30.6040</td><td>30.6052</td><td class="hi">✓</td></tr>
+      <tr><td class="lbl">3%</td><td>46.5458</td><td>46.5480</td><td class="hi">✓</td></tr>
+      <tr><td class="lbl">4%</td><td>18.0250</td><td>18.0240</td><td class="hi">✓</td></tr>
+    </table>
+    <div class="verify">curvature of the call curve = the density, to 3 decimals</div>
+
+    <div class="pullquote">A formula tells you the destination. A worked example shows you every footstep. Now there are no gaps left to fall through.</div>
+  </section>
+
+  <div class="endmark">◆ ◆ ◆</div>
+</div>
+
+<footer>
+  <p><b>About this companion.</b> A step-by-step expansion of <em>"Assembling the Cube"</em> (Field Guide II), filling in the arithmetic the main guides compress: the Black caplet priced by hand, the full cap-stripping table with assembly and bisection, SABR evaluated strike-by-strike via Hagan's approximation, the bilinear blend traced from weights through matched-moneyness to the final vol, and the Breeden–Litzenberger differentiation in full.</p>
+  <p><b>Every number was recomputed in code</b> before being written here — the cap prices, the bisection path, the three SABR node vols, the four bilinear corners, and the density check all come from running the same model the live labs use. Discount factors are set to 1 and schedules simplified for clarity, so the figures are illustrative, not tradeable.</p>
+  <p style="color:var(--accent-deep);font-style:italic;">Slow is smooth. Nothing left as magic.</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swaps & Swap Spreads — a deep-dive notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F2EC;
+    --paper-2:#FBFAF6;
+    --ink:#1A1C22;
+    --ink-soft:#414550;
+    --ink-faint:#8A8676;
+    --rule:#E2DFD3;
+    --rule-strong:#D2CEBE;
+    --line:#A7A290;
+    --fixed:#2D5BA8;        /* pay-fixed leg = blue (from the deck) */
+    --fixed-soft:#E2EAF6;
+    --float:#B5792A;        /* receive-float leg = ochre (from the deck) */
+    --float-soft:#F6ECDB;
+    --spread:#2F7A57;       /* swap spreads = green (from the deck) */
+    --spread-soft:#E2F0E8;
+    --warn:#A8761A;
+    --maxw:980px;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    /* ledger rules signature — horizontal only */
+    background-image:
+      repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--rule) 28px),
+      linear-gradient(90deg, transparent 62px, var(--rule-strong) 62px, var(--rule-strong) 63px, transparent 63px);
+    color:var(--ink);
+    font-family:"Inter", system-ui, -apple-system, sans-serif;
+    font-size:17px; line-height:28px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px;}
+
+  #progress{position:fixed; top:0; left:0; height:3px; width:0%; background:var(--spread); z-index:50; transition:width .1s linear;}
+  #topnav{position:sticky; top:0; z-index:40; background:rgba(244,242,236,.9); backdrop-filter:blur(7px); border-bottom:1px solid var(--rule-strong);}
+  #topnav .wrap{display:flex; align-items:center; gap:13px; height:52px; overflow-x:auto; scrollbar-width:none;}
+  #topnav .wrap::-webkit-scrollbar{display:none;}
+  #topnav .brand{font-family:"Space Grotesk"; font-weight:700; letter-spacing:-.01em; white-space:nowrap; font-size:15px;}
+  #topnav a{color:var(--ink-soft); text-decoration:none; font-size:12.5px; font-family:"IBM Plex Mono"; white-space:nowrap; padding:3px 0; border-bottom:2px solid transparent;}
+  #topnav a:hover{color:var(--fixed);}
+  #topnav a.active{color:var(--ink); border-bottom-color:var(--float);}
+
+  header.hero{padding:70px 0 36px;}
+  .vol{font-family:"IBM Plex Mono"; font-size:12.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--float); margin-bottom:16px;}
+  h1{font-family:"Space Grotesk"; font-weight:700; font-size:clamp(36px,6.6vw,64px); line-height:1.03; letter-spacing:-.025em; margin:0 0 18px;}
+  h1 .f{color:var(--fixed);} h1 .l{color:var(--float);}
+  .dek{font-size:20px; line-height:30px; color:var(--ink-soft); max-width:680px; margin:0 0 26px;}
+  .note{background:var(--paper-2); border:1px solid var(--rule-strong); border-left:3px solid var(--fixed); padding:15px 20px; border-radius:var(--radius); max-width:700px; font-size:15.5px; line-height:25px; color:var(--ink-soft);}
+  .note b{color:var(--ink);}
+
+  /* hero cashflow svg */
+  .hero-cf{margin:30px 0 4px; max-width:760px;}
+  .hero-cf svg{width:100%; height:auto;}
+
+  section{padding:44px 0; border-top:1px solid var(--rule-strong);}
+  .sec-no{font-family:"IBM Plex Mono"; font-size:13px; color:var(--float); letter-spacing:.1em;}
+  h2{font-family:"Space Grotesk"; font-weight:700; font-size:clamp(25px,4.4vw,37px); line-height:1.08; letter-spacing:-.02em; margin:6px 0 8px;}
+  .sub{color:var(--ink-faint); font-size:15px; line-height:24px; margin:0 0 24px; max-width:680px;}
+  h3{font-family:"Space Grotesk"; font-weight:600; font-size:21px; letter-spacing:-.01em; margin:32px 0 8px; color:var(--ink);}
+  p{margin:0 0 16px; max-width:720px;}
+  .lead{font-size:18.5px;}
+  strong{color:var(--ink); font-weight:600;}
+  em{color:var(--ink); font-style:italic;}
+  .f-t{color:var(--fixed); font-weight:600;} .l-t{color:var(--float); font-weight:600;} .s-t{color:var(--spread); font-weight:600;}
+
+  ul.clean{max-width:720px; padding-left:0; list-style:none; margin:0 0 16px;}
+  ul.clean li{position:relative; padding-left:26px; margin-bottom:11px;}
+  ul.clean li::before{content:"›"; position:absolute; left:6px; top:-1px; color:var(--float); font-family:"IBM Plex Mono"; font-weight:600;}
+
+  .card{background:var(--paper-2); border:1px solid var(--rule-strong); border-radius:var(--radius); padding:19px 22px; margin:22px 0; max-width:740px;}
+  .card .tag{font-family:"IBM Plex Mono"; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px;}
+  .why{border-left:3px solid var(--float);}
+  .key{border-left:3px solid var(--fixed); background:linear-gradient(180deg,#fff,var(--paper-2));}
+  .intuition{background:#FCFBEE; border:1px solid #E9E6C6; border-left:3px solid var(--warn);}
+  .modern{background:var(--spread-soft); border:1px solid #C2DDCC; border-left:3px solid var(--spread); font-size:14.5px; line-height:24px;}
+
+  .eq{font-family:"IBM Plex Mono"; background:#15171D; color:#E9E7DE; padding:14px 18px; border-radius:var(--radius); margin:16px 0; max-width:740px; overflow-x:auto; font-size:15px; line-height:1.85;}
+  .eq .v{color:#7FB0FF;} .eq .o{color:#E0A867;} .eq .c{color:#86836f;} .eq .g{color:#79C79C;}
+  .inlmono{font-family:"IBM Plex Mono"; background:var(--paper-2); border:1px solid var(--rule-strong); padding:1px 6px; border-radius:3px; font-size:14.5px;}
+
+  table.data{border-collapse:collapse; width:100%; max-width:740px; margin:18px 0; font-family:"IBM Plex Mono"; font-size:13.5px; background:var(--paper-2);}
+  table.data th, table.data td{border:1px solid var(--rule-strong); padding:8px 11px; text-align:right;}
+  table.data th{background:#EAE7DB; font-weight:600; color:var(--ink);}
+  table.data td.lbl, table.data th.lbl{text-align:left; color:var(--ink-soft);}
+  table.data td.cf{color:var(--fixed); font-weight:600;}
+  table.data td.cl{color:var(--float); font-weight:600;}
+  caption{caption-side:bottom; text-align:left; font-family:"Inter"; font-size:12.5px; line-height:18px; color:var(--ink-faint); padding-top:8px; max-width:740px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:740px; margin:18px 0;}
+  .rosetta{border:1px solid var(--rule-strong); border-radius:var(--radius); padding:16px 18px; background:var(--paper-2);}
+  .rosetta.fix{border-top:4px solid var(--fixed);} .rosetta.flo{border-top:4px solid var(--float);}
+  .rosetta h4{margin:0 0 10px; font-family:"Space Grotesk"; font-size:16px;}
+  .rosetta.fix h4{color:var(--fixed);} .rosetta.flo h4{color:var(--float);}
+  .rosetta ul{margin:0; padding-left:0; list-style:none;}
+  .rosetta li{font-family:"IBM Plex Mono"; font-size:13.5px; padding:3px 0; color:var(--ink-soft);}
+
+  /* dark interactive labs */
+  .lab{background:#15171D; color:#E9E7DE; border-radius:8px; padding:24px; margin:26px 0; max-width:880px;}
+  .lab h3{color:#fff; margin-top:0;}
+  .lab .labsub{color:#A7A493; font-size:14px; line-height:22px; margin-bottom:18px; max-width:none;}
+  .lab-grid{display:grid; grid-template-columns:1.2fr 1fr; gap:22px;}
+  @media(max-width:760px){ .lab-grid{grid-template-columns:1fr;} .grid2{grid-template-columns:1fr;} }
+  canvas{width:100%; height:auto; background:#0F1116; border-radius:6px; border:1px solid #262932;}
+  .controls label{font-family:"IBM Plex Mono"; font-size:12.5px; color:#A7A493; margin:15px 0 4px; display:flex; justify-content:space-between;}
+  .controls label span.val{color:#7FB0FF;}
+  input[type=range]{width:100%; accent-color:#3C6DC0; cursor:pointer;}
+  .presets{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 4px;}
+  .presets button{flex:1 1 auto; background:#222631; color:#D6D3C4; border:1px solid #343948; border-radius:5px; padding:8px 6px; font-family:"IBM Plex Mono"; font-size:11.5px; cursor:pointer; transition:.15s;}
+  .presets button:hover{background:#2C3140;}
+  .readout{margin-top:18px; border-top:1px solid #262932; padding-top:14px; font-family:"IBM Plex Mono"; font-size:13px;}
+  .readout .row{display:flex; justify-content:space-between; padding:3px 0;}
+  .verdict{margin-top:13px; padding:11px 14px; background:#0F1116; border-radius:6px; font-size:12.5px; line-height:1.6; color:#D6D3C4; border:1px solid #262932;}
+  .dotF{color:#6E97E0;} .dotL{color:#E0A867;} .dotS{color:#79C79C;}
+
+  /* light calculators */
+  .calc{background:var(--paper-2); border:1px solid var(--rule-strong); border-radius:8px; padding:22px; margin:24px 0; max-width:760px;}
+  .calc h3{margin-top:0;}
+  .calc-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:9px 0;}
+  .calc-row label{font-size:13px; color:var(--ink-soft); min-width:280px; font-family:"IBM Plex Mono";}
+  .calc-row input[type=range]{flex:1; min-width:150px; accent-color:var(--spread);}
+  .calc-row .v{font-family:"IBM Plex Mono"; color:var(--spread); min-width:74px; text-align:right; font-weight:600;}
+  .calc-out{margin-top:16px; border-top:1px dashed var(--rule-strong); padding-top:14px; font-family:"IBM Plex Mono"; font-size:14px;}
+  .calc-out .big{font-size:19px; font-weight:600;}
+  .impact-row{display:flex; justify-content:space-between; padding:3px 0; font-family:"IBM Plex Mono"; font-size:13px; color:var(--ink-soft);}
+  .pill{display:inline-block; padding:2px 9px; border-radius:20px; font-size:12px; font-family:"IBM Plex Mono"; font-weight:600;}
+  .pill.tight{background:var(--spread-soft); color:var(--spread);}
+  .pill.wide{background:var(--float-soft); color:var(--float);}
+  .reset{background:var(--ink); color:#fff; border:none; border-radius:5px; padding:8px 14px; font-family:"IBM Plex Mono"; font-size:12px; cursor:pointer; margin-top:8px;}
+
+  .quiz{border:1px solid var(--rule-strong); border-radius:8px; background:var(--paper-2); padding:20px 22px; margin:20px 0; max-width:740px;}
+  .quiz .q{font-weight:600; margin-bottom:12px;}
+  .quiz button.opt{display:block; width:100%; text-align:left; background:#fff; border:1px solid var(--rule-strong); border-radius:5px; padding:11px 14px; margin-bottom:8px; cursor:pointer; font-size:14.5px; font-family:"Inter"; transition:.12s;}
+  .quiz button.opt:hover{border-color:var(--fixed);}
+  .quiz button.opt.correct{background:var(--spread-soft); border-color:var(--spread); color:var(--spread);}
+  .quiz button.opt.wrong{background:var(--float-soft); border-color:var(--float); color:var(--float);}
+  .quiz .explain{display:none; margin-top:10px; font-size:14px; line-height:23px; color:var(--ink-soft); border-left:3px solid var(--spread); padding-left:12px;}
+  .quiz .explain.show{display:block;}
+
+  footer{padding:48px 0 70px; border-top:1px solid var(--rule-strong); color:var(--ink-faint); font-size:13.5px; line-height:21px;}
+  .disc{font-size:12px; color:var(--ink-faint); margin-top:14px; max-width:740px;}
+
+  @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto; transition:none!important;} }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="topnav"><div class="wrap">
+  <span class="brand">Swaps&nbsp;&amp;&nbsp;Spreads</span>
+  <a href="#s1">1·What it is</a>
+  <a href="#s2">2·Why par</a>
+  <a href="#s3">3·Carry &amp; slide</a>
+  <a href="#s4">4·The zoo</a>
+  <a href="#s5">5·Swap spreads</a>
+  <a href="#s6">6·What moves them</a>
+  <a href="#s7">7·The hidden option</a>
+  <a href="#s8">8·Recap</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="vol">Volume II · built from the J.P. Morgan seminar “Intro to swaps & drivers of swap spreads,” Sep 2020</div>
+  <h1>Two streams of cash,<br>traded for <span class="f">each other</span> —<br>and what makes the <span class="l">gap</span> move.</h1>
+  <p class="dek">A swap is just one set of payments exchanged for another. From that single idea we'll build par pricing, carry, the swap curve as a benchmark, and finish on the deep stuff: what actually drives swap spreads, and why a long-end flattener is secretly an option.</p>
+
+  <div class="hero-cf">
+    <svg viewBox="0 0 760 150" xmlns="http://www.w3.org/2000/svg" aria-label="Swap cash-flow timeline: fixed coupons up, floating coupons down">
+      <line x1="20" y1="75" x2="740" y2="75" stroke="#A7A290" stroke-width="2"/>
+      <!-- fixed up arrows (blue) -->
+      <g stroke="#2D5BA8" stroke-width="3" fill="#2D5BA8">
+        <line x1="180" y1="75" x2="180" y2="34"/><polygon points="180,26 174,40 186,40"/>
+        <line x1="350" y1="75" x2="350" y2="34"/><polygon points="350,26 344,40 356,40"/>
+        <line x1="520" y1="75" x2="520" y2="34"/><polygon points="520,26 514,40 526,40"/>
+        <line x1="690" y1="75" x2="690" y2="34"/><polygon points="690,26 684,40 696,40"/>
+      </g>
+      <text x="690" y="18" fill="#2D5BA8" font-family="IBM Plex Mono" font-size="12" text-anchor="middle">pay fixed C/2</text>
+      <!-- float down arrows (ochre) -->
+      <g stroke="#B5792A" stroke-width="3" fill="#B5792A">
+        <line x1="95"  y1="75" x2="95"  y2="116"/><polygon points="95,124 89,110 101,110"/>
+        <line x1="180" y1="75" x2="180" y2="116"/><polygon points="180,124 174,110 186,110"/>
+        <line x1="265" y1="75" x2="265" y2="116"/><polygon points="265,124 259,110 271,110"/>
+        <line x1="350" y1="75" x2="350" y2="116"/><polygon points="350,124 344,110 356,110"/>
+        <line x1="435" y1="75" x2="435" y2="116"/><polygon points="435,124 429,110 441,110"/>
+        <line x1="520" y1="75" x2="520" y2="116"/><polygon points="520,124 514,110 526,110"/>
+        <line x1="605" y1="75" x2="605" y2="116"/><polygon points="605,124 599,110 611,110"/>
+        <line x1="690" y1="75" x2="690" y2="116"/><polygon points="690,124 684,110 696,110"/>
+      </g>
+      <text x="95" y="142" fill="#B5792A" font-family="IBM Plex Mono" font-size="12" text-anchor="start">receive floating (3M), quarterly</text>
+      <circle cx="20" cy="75" r="5" fill="#1A1C22"/><circle cx="740" cy="75" r="5" fill="#1A1C22"/>
+      <text x="20" y="68" fill="#8A8676" font-family="IBM Plex Mono" font-size="11">today</text>
+    </svg>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<!-- ===== 1 ===== -->
+<section id="s1">
+  <div class="sec-no">SECTION 01</div>
+  <h2>What a swap actually is</h2>
+  <p class="sub">Strip away the jargon and a swap is one promise: I'll pay you this stream, you pay me that stream. Get the vocabulary nailed here and the rest of the deck unlocks.</p>
+
+  <p class="lead">A <strong>swap</strong> is a contract to exchange one set of cash flows for another, where the flows depend on some market variable. Because its value <em>derives</em> from that variable, a swap is a derivative.</p>
+  <p>The workhorse is the <strong>vanilla interest-rate swap</strong>: one party pays a <span class="f-t">fixed</span> rate, the other pays a <span class="l-t">floating</span> rate (historically 3-month LIBOR). Concretely — <span class="inlmono">receive 2.80% for 30Y vs pay floating</span>. That single position is economically identical to:</p>
+  <ul class="clean">
+    <li><span class="f-t">Buying</span> a 30-year bond with a 2.80% coupon (you receive fixed), <em>and</em></li>
+    <li><span class="l-t">Selling</span> a floating-rate savings account (you pay floating),</li>
+    <li>…but with <strong>no exchange of the underlying assets</strong> and none of the associated funding cost. That's the magic — same exposure, "no money down."</li>
+  </ul>
+
+  <h3>The Rosetta Stone — say it five ways</h3>
+  <p>Every swap has two sides, and the desk has five names for each. This table is worth memorizing cold, because the rest of fixed income borrows this language:</p>
+  <div class="grid2">
+    <div class="rosetta fix"><h4>Pay fixed / receive floating</h4><ul>
+      <li>= Short swaps</li><li>= Short fixed-coupon bonds</li><li>= Short duration</li><li>= "Payer"</li><li>= Borrowing</li>
+      <li style="color:var(--fixed);margin-top:6px">→ profits if rates RISE</li>
+    </ul></div>
+    <div class="rosetta flo"><h4>Receive fixed / pay floating</h4><ul>
+      <li>= Long swaps</li><li>= Long fixed-coupon bonds</li><li>= Long duration</li><li>= "Receiver"</li><li>= Lending</li>
+      <li style="color:var(--float);margin-top:6px">→ profits if rates FALL</li>
+    </ul></div>
+  </div>
+  <div class="card intuition"><div class="tag">Plain-English anchor</div><strong>Pay fixed = short duration = bet rates go up.</strong> <strong>Receive fixed = long duration = bet rates go down.</strong> When a later slide says "issuers receive in size," translate instantly: they're <em>buying duration / betting rates fall</em>, which pushes swap rates down. Half of "drivers of swap spreads" is just applying this one reflex.</div>
+
+  <h3>Why the market is enormous</h3>
+  <p>Swaps are self-funded, deeply liquid, and the curve extends far out the maturity spectrum — so the <strong>swap curve became the benchmark</strong> against which other fixed-income assets are valued. The scale is hard to overstate: the market in its various forms had <span class="inlmono">~$100 trillion</span> notional outstanding versus roughly <span class="inlmono">$14 trillion</span> of US government public debt. Participation skews to <span class="inlmono">hedge funds (~45%)</span>, then asset managers (~20%), financial issuers (~15%), bank portfolios (~10%), with insurers and foreign accounts rounding it out. Around <strong>80% of gross notional is centrally cleared</strong>, and dealers plus major swap participants still drive ~74% of activity.</p>
+
+  <div class="card modern"><div class="tag">A note from 2026</div>This deck is from 2020 and uses <strong>3M LIBOR</strong> as the floating leg. USD LIBOR was discontinued (the panel ended mid-2023), and the market standard floating index is now <strong>SOFR</strong> — a near-risk-free overnight rate, compounded. Everywhere you read "3M LIBOR" below, the <em>mechanics</em> are identical; just mentally swap in SOFR as the floating reference. The deck already saw this coming — note OIS/SOFR sitting in the swap taxonomy in Section 4.</div>
+</section>
+
+<!-- ===== 2 ===== -->
+<section id="s2">
+  <div class="sec-no">SECTION 02</div>
+  <h2>How a swap is priced — “why par?”</h2>
+  <p class="sub">A new swap costs nothing to enter. That isn't luck; it's arithmetic. Here's exactly why the two legs are worth the same dollar amount on day one.</p>
+
+  <p>Picture a standard 2Y USD pay-fixed swap as two bonds back-to-back:</p>
+  <ul class="clean">
+    <li>You <span class="f-t">sell a 2-year fixed-rate bond</span>: pay the coupon <span class="inlmono">C/2</span> semi-annually. This leg has <strong>negative</strong> value to you (you owe it).</li>
+    <li>You <span class="l-t">buy a 2-year floating-rate bond</span>: receive 3M floating, quarterly. This leg has <strong>positive</strong> value.</li>
+    <li>At inception the two legs are <strong>equal in magnitude by design</strong> — so the net value is zero. (Conventions: USD pays fixed 30/360 semi-annual, floating Act/360 quarterly.)</li>
+  </ul>
+
+  <div class="card key"><div class="tag">The "why par?" insight — this is the whole trick</div>
+  A <strong>floating-rate bond always prices to par</strong> ($100) at a reset, because its coupon <em>is</em> the discount rate — they reset together, so they cancel. If the floating leg is worth par, then for the swap to be zero-cost the <strong>fixed leg must also be worth par</strong>. The fixed coupon that makes a fixed bond worth exactly par is, by definition, the <strong>par swap rate</strong>. So: <em>"the swap rate is just the coupon that values the fixed leg at 100, matching the float leg's 100."</em> That's all a swap rate is.</div>
+
+  <h3>One wrinkle: OIS discounting</h3>
+  <p>Cleared swaps are collateralized, so their cash flows are discounted at the overnight (OIS) rate, not LIBOR. That tiny change breaks the clean "$100 = $100." Worked example from the deck: a swap built to <span class="inlmono">receive (OIS + 35bp)</span> ends up with each leg worth <span class="inlmono">$100.69</span>, not $100.</p>
+  <ul class="clean">
+    <li><strong>Why the 35bp?</strong> It comes from the 2Y LIBOR/Fed-funds basis swap — the market price of LIBOR over the overnight rate.</li>
+    <li><strong>Why a premium (the extra $0.69)?</strong> Because the spread over OIS is positive: the LIBOR coupons you receive are <em>higher</em> than the OIS rates you discount them at. Discounting bigger coupons at smaller rates lifts present value above par.</li>
+  </ul>
+  <p style="font-size:14px;color:var(--ink-faint)">Toggle the timeline below to see the difference between the textbook (LIBOR-discounted, par) and the cleared (OIS-discounted) views.</p>
+
+  <div class="lab" style="background:var(--paper-2);color:var(--ink);border:1px solid var(--rule-strong)">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button id="disc_lib" class="reset" style="background:var(--fixed)">Textbook: LIBOR-discounted</button>
+      <button id="disc_ois" class="reset" style="background:var(--ink-faint)">Cleared: OIS-discounted</button>
+    </div>
+    <div style="display:flex;gap:30px;flex-wrap:wrap;font-family:'IBM Plex Mono';font-size:15px">
+      <div><div style="color:var(--ink-faint);font-size:12px">Fixed leg NPV</div><div id="npv_fix" style="font-size:22px;font-weight:600;color:var(--fixed)">−$100.00</div></div>
+      <div><div style="color:var(--ink-faint);font-size:12px">Float leg NPV</div><div id="npv_flo" style="font-size:22px;font-weight:600;color:var(--float)">+$100.00</div></div>
+      <div><div style="color:var(--ink-faint);font-size:12px">Net (cost to enter)</div><div id="npv_net" style="font-size:22px;font-weight:600;color:var(--spread)">$0.00</div></div>
+    </div>
+    <p id="disc_note" style="margin:16px 0 0;font-size:14px;color:var(--ink-soft)">Both legs price to par and net to zero — the textbook par swap.</p>
+  </div>
+</section>
+
+<!-- ===== 3 ===== -->
+<section id="s3">
+  <div class="sec-no">SECTION 03 · live</div>
+  <h2>Carry &amp; slide — the cost of just holding</h2>
+  <p class="sub">Even if rates never move, a swap position makes or loses money over time. That's carry and slide — and once you can read them off the curve, you understand half of trade selection.</p>
+
+  <p><strong>Carry</strong> is coupon income minus financing cost. <strong>Slide</strong> (or roll-down) is the gain/loss from your swap aging into a different point on the curve. Both fall straight out of the curve's geometry. Using a 10Y receiver over a 3-month horizon:</p>
+  <div class="eq">no-arbitrage:   Yield(<span class="v">10Y</span>) <span class="o">+</span> Carry(3M) = Yield(<span class="v">3M×9Y9M</span>)
+                Carry(3M) = Yield(3M×9Y9M) <span class="o">−</span> Yield(10Y)     <span class="c">// the forward minus the spot</span>
+
+roll-down:      slide(3M) = Yield(<span class="v">10Y</span>) <span class="o">−</span> Yield(<span class="v">9Y9M</span>)     <span class="c">// your 10Y is a 9Y9M in 3 months</span></div>
+  <p>Add them and the middle terms telescope into a clean breakeven over a one-year horizon:</p>
+  <div class="eq"><span class="g">[</span>Y(1Y×9Y) <span class="o">−</span> Y(10Y)<span class="g">]</span> <span class="o">+</span> <span class="g">[</span>Y(10Y) <span class="o">−</span> Y(9Y)<span class="g">]</span> = Y(1Y×9Y) <span class="o">−</span> Y(9Y)
+   └──── carry ────┘   └──── slide ────┘    └─ carry + slide ─┘</div>
+  <p>The deck's headline number: an investor <strong>receiving fixed in a 10Y</strong> expects to earn about <span class="inlmono">27bp over a year</span> if the curve simply stays put. So <strong>being long 10s carries positively</strong>; shorts (paying fixed) are negative-carry. One honest caveat the authors stress: it's valid to read carry+slide as a <em>breakeven move in spot yields</em>; reading it as projected P/L is a stretch.</p>
+
+  <div class="calc" id="carryCalc">
+    <h3>Carry &amp; slide calculator</h3>
+    <p style="font-size:14px;color:var(--ink-soft);max-width:none;margin-bottom:8px">Set three points on the curve and watch carry, slide, and the total breakeven for a <em>receive-fixed</em> (long) position. Defaults give the deck's positively-sloped curve.</p>
+    <div class="calc-row"><label>Yield( 9Y ) spot</label><input type="range" id="c_y9" min="0.2" max="3.5" step="0.01" value="1.30"><span class="v" id="c_y9_v">1.30%</span></div>
+    <div class="calc-row"><label>Yield( 10Y ) spot</label><input type="range" id="c_y10" min="0.2" max="3.5" step="0.01" value="1.50"><span class="v" id="c_y10_v">1.50%</span></div>
+    <div class="calc-row"><label>Yield( 1Y×9Y ) forward</label><input type="range" id="c_yf" min="0.2" max="3.5" step="0.01" value="1.67"><span class="v" id="c_yf_v">1.67%</span></div>
+    <div class="calc-out">
+      <div class="impact-row"><span>Slide = Y(10Y) − Y(9Y) &nbsp;<span style="color:var(--ink-faint)">(roll-down)</span></span><span id="c_slide" class="l-t">+20 bp</span></div>
+      <div class="impact-row"><span>Carry = Y(1Y×9Y) − Y(10Y) &nbsp;<span style="color:var(--ink-faint)">(forward − spot)</span></span><span id="c_carry" class="f-t">+17 bp</span></div>
+      <div class="impact-row" style="border-top:1px dashed var(--rule-strong);padding-top:10px;margin-top:6px"><span><b>Carry + slide (1Y breakeven)</b></span><span id="c_total" class="big s-t">+37 bp</span></div>
+      <div id="c_verdict" style="margin-top:8px"></div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--ink-faint)">Try inverting the curve (set the 9Y above the 10Y, or the forward below spot): carry and slide flip negative, and the long position now <em>bleeds</em> just sitting there. That sign is often what separates a good entry from a bad one.</p>
+</section>
+
+<!-- ===== 4 ===== -->
+<section id="s4">
+  <div class="sec-no">SECTION 04</div>
+  <h2>The swap zoo</h2>
+  <p class="sub">"Swap" is a family, not a single animal. Here's the taxonomy, split by what trades against what.</p>
+
+  <div class="grid2">
+    <div class="rosetta fix"><h4>Fixed / Floating</h4><ul style="font-family:Inter;font-size:14px;color:var(--ink-soft)">
+      <li style="font-family:Inter">• <b>LIBOR swaps</b> — fixed vs term LIBOR (legacy)</li>
+      <li style="font-family:Inter">• <b>OIS</b> — fixed vs a compounded overnight index</li>
+      <li style="font-family:Inter">&nbsp;&nbsp;&nbsp;– <b>SOFR</b> and <b>Fed funds</b> are the overnight indices</li>
+    </ul></div>
+    <div class="rosetta flo"><h4>Floating / Floating</h4><ul style="font-family:Inter;font-size:14px;color:var(--ink-soft)">
+      <li style="font-family:Inter">• <b>Tenor basis</b> — one LIBOR tenor vs another (1s/3s, 3s/6s)</li>
+      <li style="font-family:Inter">• <b>Index basis</b> — FF/LIBOR, SOFR/LIBOR, FF/SOFR</li>
+      <li style="font-family:Inter">• <b>Cross-currency basis</b> — float in one currency vs another, + notional exchange</li>
+    </ul></div>
+  </div>
+
+  <table class="data">
+    <tr><th class="lbl">Instrument</th><th class="lbl">What it does</th></tr>
+    <tr><td class="lbl">FRA (forward rate agreement)</td><td class="lbl">Pays the difference between a reference rate on a future date and a pre-agreed rate; settles at the start of the period</td></tr>
+    <tr><td class="lbl">Tenor basis swap</td><td class="lbl">Swaps one LIBOR tenor for another ± a fixed spread</td></tr>
+    <tr><td class="lbl">Cross-currency basis</td><td class="lbl">Exchanges notional at an agreed FX rate, each leg pays its own currency's index ± a spread</td></tr>
+    <tr><td class="lbl">OIS</td><td class="lbl">Fixed vs a compounded overnight index (SOFR, FF); usually paid annually</td></tr>
+    <tr><td class="lbl">FF/LIBOR swap</td><td class="lbl">Quarterly LIBOR vs the quarterly arithmetic average of Fed funds ± a spread</td></tr>
+    <caption>The point of the zoo: each "basis" is a price for a specific risk — credit (LIBOR vs OIS), tenor, currency. Those bases are the raw material from which swap spreads are built.</caption>
+  </table>
+</section>
+
+<!-- ===== 5 ===== -->
+<section id="s5">
+  <div class="sec-no">SECTION 05</div>
+  <h2>Swap spreads — what they are</h2>
+  <p class="sub">Now the centerpiece. A swap spread compares the swap curve to the government curve — and it can be sliced several ways, each with its own quirk.</p>
+
+  <p>A <strong>swap spread</strong> pairs a cash security (usually a Treasury) with a duration-equivalent interest-rate swap. Loosely: <span class="inlmono">swap spread ≈ swap rate − Treasury yield</span> of matched maturity. It can be positive or negative, and it's a clean read on the swap market's value <em>relative</em> to risk-free govvies. But "matched" hides choices:</p>
+  <table class="data">
+    <tr><th class="lbl">Construction</th><th class="lbl">How it's matched</th></tr>
+    <tr><td class="lbl">Maturity-matched</td><td class="lbl">Swap maturity = security maturity</td></tr>
+    <tr><td class="lbl">Par / par</td><td class="lbl">Swap coupon set to match the security's fixed coupon</td></tr>
+    <tr><td class="lbl">True</td><td class="lbl">Both coupon and maturity matched</td></tr>
+    <tr><td class="lbl">Futures invoice spread</td><td class="lbl">Treasury futures vs a forward-starting swap dated to the likely cheapest-to-deliver (CTD)</td></tr>
+    <tr><td class="lbl">TSY / OIS</td><td class="lbl">Treasury swapped to a maturity-matched OIS rate</td></tr>
+    <caption>In calm markets these track each other closely; in stress (e.g. March 2020) they can diverge sharply — which is itself tradable information.</caption>
+  </table>
+  <div class="card intuition"><div class="tag">Why does the spread even exist / move?</div>It's a tug-of-war. On one side, structural <em>receivers</em> of fixed (issuers, convexity hedgers) push swap rates <em>down</em> relative to Treasuries → spreads <strong>tighten/narrow</strong>. On the other, Treasury <em>supply</em> and the players who absorb it push the other way. Section 6 maps every one of these forces.</div>
+</section>
+
+<!-- ===== 6 ===== -->
+<section id="s6">
+  <div class="sec-no">SECTION 06 · live</div>
+  <h2>What moves swap spreads</h2>
+  <p class="sub">The deck organizes the whole universe of flows into receivers vs the cash/supply side — then fits a regression that you can actually drive yourself.</p>
+
+  <h3>The map of structural flows</h3>
+  <div class="grid2">
+    <div class="rosetta flo"><h4>Receivers (push spreads tighter)</h4><ul style="font-family:Inter;font-size:14px;color:var(--ink-soft)">
+      <li style="font-family:Inter">• <b>Issuance-related</b>: domestic financials, Yankee banks, corporates issue fixed bonds and receive fixed in swaps</li>
+      <li style="font-family:Inter">• <b>Convexity hedgers</b>: variable annuities, mortgage hedgers (servicers, banks, mREITs), callable-issuance hedges, systematic gamma shorts</li>
+    </ul></div>
+    <div class="rosetta fix"><h4>Cash / supply side (push the other way)</h4><ul style="font-family:Inter;font-size:14px;color:var(--ink-soft)">
+      <li style="font-family:Inter">• <b>Treasury</b>: net debt issuance (more govvies → wider/cheaper Treasuries → narrower spreads)</li>
+      <li style="font-family:Inter">• <b>Liability-driven investors</b> (pensions)</li>
+      <li style="font-family:Inter">• <b>The Fed</b>: asset purchases, funding-market interventions</li>
+    </ul></div>
+  </div>
+
+  <h3>Force #1 — issuance-related receiving</h3>
+  <p>A financial issuer wants <em>floating</em>-rate liabilities (to match floating assets — classic asset/liability management). So it issues a fixed bond to investors, then <strong>receives fixed</strong> in a swap with the dealer to flip its own payments back to floating. The receiving leg of that swap pulls swap rates down → spreads tighten. Because issuance clusters in the calendar, 10Y swap spreads show <strong>robust seasonal patterns</strong> — certain weeks reliably tighten.</p>
+
+  <h3>Force #2 — convexity hedging (the dangerous one)</h3>
+  <p>Mortgages, MSRs and variable annuities carry <strong>negative convexity</strong>: their durations <em>lengthen</em> as rates rise and <em>shorten</em> as rates fall. To stay hedged, holders must trade <em>in the same direction as the market</em> — selling duration (paying fixed) into a sell-off, buying it (receiving) into a rally. When a big sell-off forces many hedgers to pay at once, it can snowball into a <strong>"convexity event"</strong> that whips spreads around. The deck flags that banks and mortgage REITs came into Q2 2020 unusually short, with the mortgage universe having re-loaded negative convexity.</p>
+
+  <h3>Force #3 — supply vs the Fed</h3>
+  <p>Heading into a record budget deficit, Treasury issuance was set to outpace Fed buying. More government supply cheapens Treasuries relative to swaps, giving longer-dated spreads <strong>room to narrow</strong>. The deck packages all of this into a regression of 6-month changes in the 30Y matched-maturity swap spread. The model below is that regression — drag any driver and watch the projected spread move.</p>
+
+  <div class="calc" id="ssModel">
+    <h3>30Y swap-spread driver model</h3>
+    <p style="font-size:14px;color:var(--ink-soft);max-width:none;margin-bottom:6px">Predicted 6-month <em>change</em> in the 30Y spread = intercept + Σ(coefficient × driver change). Coefficients are the deck's 10-year regression (R² = 72%). Defaults reproduce its 4/30→year-end-2020 scenario.</p>
+    <div class="calc-row"><label>3M GC/OIS spread, Δ (bp) &nbsp;· coef −0.29</label><input type="range" id="m0" min="-20" max="30" step="1" value="5"><span class="v" id="m0v">5</span></div>
+    <div class="calc-row"><label>10s/30s Treasury curve, Δ (bp) &nbsp;· coef −0.417</label><input type="range" id="m1" min="-30" max="30" step="1" value="0"><span class="v" id="m1v">0</span></div>
+    <div class="calc-row"><label>%chg WAM-wtd public Tsy debt &nbsp;· coef −0.32</label><input type="range" id="m2" min="-10" max="30" step="0.5" value="14.3"><span class="v" id="m2v">14.3</span></div>
+    <div class="calc-row"><label>VA hedging demand, Δ ($bn 20s) &nbsp;· coef −0.121</label><input type="range" id="m3" min="-60" max="60" step="1" value="0"><span class="v" id="m3v">0</span></div>
+    <div class="calc-row"><label>Fed custody holdings, Δ ($bn) &nbsp;· coef +0.049</label><input type="range" id="m4" min="-300" max="100" step="5" value="-120"><span class="v" id="m4v">−120</span></div>
+    <div class="calc-out">
+      <div class="impact-row"><span>Intercept (6-month drift)</span><span>−2.20 bp</span></div>
+      <div class="impact-row"><span>Σ driver impacts</span><span id="m_sum">−11.9 bp</span></div>
+      <div class="impact-row" style="border-top:1px dashed var(--rule-strong);padding-top:9px;margin-top:5px"><span><b>Predicted 6M change in spread</b></span><span id="m_chg" class="big">−14.1 bp</span></div>
+      <div class="impact-row" style="margin-top:8px"><span>From current level (−46 bp) →</span><span id="m_proj" class="big s-t">−60 bp</span></div>
+      <div id="m_verdict" style="margin-top:8px"></div>
+    </div>
+    <button class="reset" id="m_reset">Reset to the deck's scenario</button>
+  </div>
+</section>
+
+<!-- ===== 7 ===== -->
+<section id="s7">
+  <div class="sec-no">SECTION 07 · the payoff</div>
+  <h2>The hidden option in a flattener</h2>
+  <p class="sub">The deck's most elegant idea. A perfectly boring-looking curve trade — pay 30Y, receive 50Y, sized to be duration-neutral — turns out to behave like a <em>long option</em> when rates move in parallel. Here's why, and you can dial it yourself.</p>
+
+  <p>Set up a <strong>duration-neutral long-end flattener</strong>: <span class="f-t">pay fixed in the 30Y</span> and <span class="l-t">receive fixed in the 50Y</span>, weighting the legs so their DV01s cancel. Now shock the whole curve up or down in parallel:</p>
+  <ul class="clean">
+    <li>The <strong>duration</strong> exposure is engineered to zero — first-order, the trade doesn't care which way rates go.</li>
+    <li>But the 50Y has <strong>more convexity</strong> than the 30Y. Receiving the higher-convexity leg and paying the lower-convexity leg (matched on duration, <em>not</em> convexity) leaves you <strong>net long convexity</strong>.</li>
+    <li>Long convexity means a curved, smiling payoff: you make money whether rates rise <em>or</em> fall. That's exactly an option's profile — like owning a strangle, paid for with a little negative carry.</li>
+  </ul>
+
+  <div class="card key"><div class="tag">The math, in one line</div>
+  Each leg's price moves as <span class="inlmono">ΔP ≈ −D·Δy + ½·C·Δy²</span>. Weight the 30Y leg by <span class="inlmono">w = D₅₀/D₃₀</span> so durations cancel, and the combined flattener payoff is pure convexity:
+  <div class="eq" style="margin:10px 0 4px">Payoff(Δy) = ½ · ( <span class="v">C₅₀</span> <span class="o">−</span> (D₅₀/D₃₀)·<span class="v">C₃₀</span> ) · Δy²  <span class="o">−</span>  carry drag</div>
+  Because convexity grows faster than duration as maturity extends, that bracket is <strong>positive</strong> → a smile. The "carry drag" is what you pay (in negative carry + slide) to own this free convexity, and it sets the breakevens.</div>
+
+  <div class="lab">
+    <h3>Flattener-as-option simulator</h3>
+    <p class="labsub">Parallel rate shock on the x-axis. The two faint lines are each leg's price (left scale); the bold line is the duration-neutral flattener payoff (right scale) — the option-like smile. Crank the carry drag to see the breakevens widen.</p>
+    <div class="lab-grid">
+      <div>
+        <canvas id="convCanvas" width="520" height="380" aria-label="Convexity smile of a duration-neutral flattener"></canvas>
+        <div class="presets">
+          <button data-id="base">Base case</button>
+          <button data-id="flat">Equal convexity (no smile)</button>
+          <button data-id="rich">Cheap carry (deep value)</button>
+        </div>
+      </div>
+      <div class="controls">
+        <label>D₃₀ — 30Y leg duration <span class="val" id="v_d30">19</span></label>
+        <input type="range" id="d30" min="12" max="24" step="0.5" value="19">
+        <label>C₃₀ — 30Y leg convexity <span class="val" id="v_c30">4.5</span></label>
+        <input type="range" id="c30" min="1" max="14" step="0.5" value="4.5">
+        <label>D₅₀ — 50Y leg duration <span class="val" id="v_d50">27</span></label>
+        <input type="range" id="d50" min="20" max="34" step="0.5" value="27">
+        <label>C₅₀ — 50Y leg convexity <span class="val" id="v_c50">11</span></label>
+        <input type="range" id="c50" min="1" max="20" step="0.5" value="11">
+        <label>Carry drag — cost to hold (P/L units) <span class="val" id="v_drag">8</span></label>
+        <input type="range" id="drag" min="0" max="25" step="0.5" value="8">
+        <div class="readout">
+          <div class="row"><span class="dotS">━ Flattener payoff at ±0bp</span><b id="o_atm">−8.0</b></div>
+          <div class="row"><span style="color:#A7A493">Net convexity (smile strength)</span><b id="o_conv">+4.6</b></div>
+          <div class="row"><span style="color:#A7A493">Approx. breakevens</span><b id="o_be">±59 bp</b></div>
+        </div>
+        <div class="verdict" id="o_verdict"></div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--ink-faint)">Model note: a stylized duration/convexity model (ΔP ≈ −D·Δy + ½C·Δy²) in the spirit of the deck's Exhibit. It reproduces the qualitative shape — a convex smile that's positive in big moves and dips by the carry cost near the center — rather than exact dollar P/L, which depends on the live curve and vols. The deck values this "fair" by asking what volatility would make the smile's expected gain exactly offset the carry, then comparing that to swaption-implied vol.</p>
+</section>
+
+<!-- ===== 8 ===== -->
+<section id="s8">
+  <div class="sec-no">SECTION 08</div>
+  <h2>Recap &amp; self-test</h2>
+  <p class="sub">The whole deck distilled, then four questions. Answer them and you've got the foundations cold.</p>
+
+  <ul class="clean">
+    <li><strong>A swap</strong> exchanges fixed for floating cash flows. <span class="f-t">Pay fixed</span> = short duration = bet rates rise; <span class="l-t">receive fixed</span> = long duration = bet rates fall.</li>
+    <li><strong>Why par:</strong> the floating leg prices to 100 (coupon = discount rate), so the fixed coupon — the swap rate — is set to value the fixed leg at 100 too. Net cost zero. OIS discounting nudges this slightly (the +$0.69 example).</li>
+    <li><strong>Carry + slide</strong> = what you earn/lose if the curve stays still; read it as a breakeven, not a forecast. Long 10s ≈ +27bp/yr positive carry on an upward curve.</li>
+    <li><strong>A swap spread</strong> = swap rate − Treasury yield, matched several ways. It's a tug-of-war between structural receivers (issuers, convexity hedgers → tighter) and supply (Treasury → wider).</li>
+    <li><strong>Drivers</strong> fit a regression (GC/OIS, curve, debt growth, VA hedging, Fed holdings) explaining ~72% of 30Y spread changes.</li>
+    <li><strong>The hidden option:</strong> a duration-neutral long-end flattener is net long convexity, so it smiles under parallel shocks — an option you pay for in carry.</li>
+  </ul>
+
+  <div class="quiz" id="quiz"></div>
+
+  <h3>Glossary, fast</h3>
+  <table class="data" style="font-size:13px">
+    <tr><th class="lbl">Term</th><th class="lbl">Means</th></tr>
+    <tr><td class="lbl">Payer / Receiver</td><td class="lbl">Pay fixed (short duration) / receive fixed (long duration)</td></tr>
+    <tr><td class="lbl">Par swap rate</td><td class="lbl">Fixed coupon that makes the swap zero-cost at inception</td></tr>
+    <tr><td class="lbl">OIS</td><td class="lbl">Overnight indexed swap; the collateral discount rate for cleared swaps</td></tr>
+    <tr><td class="lbl">Carry / Slide</td><td class="lbl">Forward − spot / roll-down the curve over a horizon</td></tr>
+    <tr><td class="lbl">Swap spread</td><td class="lbl">Swap rate − Treasury yield, matched maturity</td></tr>
+    <tr><td class="lbl">Negative convexity</td><td class="lbl">Duration extends in sell-offs, shortens in rallies (mortgages, MSR, VA)</td></tr>
+    <tr><td class="lbl">DV01 / PVBP</td><td class="lbl">Dollar P/L per 1bp yield move</td></tr>
+    <tr><td class="lbl">Duration-neutral</td><td class="lbl">Leg sizes set so first-order rate sensitivity cancels</td></tr>
+  </table>
+</section>
+
+<footer><div class="wrap">
+  <p>A learning companion to <em>“Interest Rate Derivatives Seminar Series: Introduction to swaps and drivers of swap spreads,”</em> J.P. Morgan, September 2020. Concepts, figures, and the regression coefficients are drawn from that deck.</p>
+  <p class="disc"><strong>Not investment advice.</strong> Educational explainer of a published research framework. Calculators use the deck's example inputs with simplified assumptions (par/OIS pricing, carry decomposition, and a stylized duration/convexity model). Do your own analysis before trading.</p>
+</div></footer>
+</main>
+
+<script>
+/* progress + nav */
+const prog=document.getElementById('progress');
+const navLinks=[...document.querySelectorAll('#topnav a')];
+const secs=[...document.querySelectorAll('section')];
+function onScroll(){
+  const h=document.documentElement;
+  prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+  let cur=secs[0].id;
+  for(const s of secs){ if(s.getBoundingClientRect().top<120) cur=s.id; }
+  navLinks.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+cur));
+}
+document.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+
+/* discounting toggle */
+(function(){
+  const fix=document.getElementById('npv_fix'), flo=document.getElementById('npv_flo'), net=document.getElementById('npv_net'), note=document.getElementById('disc_note');
+  const bL=document.getElementById('disc_lib'), bO=document.getElementById('disc_ois');
+  function setLib(){
+    fix.textContent='−$100.00'; flo.textContent='+$100.00'; net.textContent='$0.00';
+    note.textContent='Both legs price to par and net to zero — the textbook par swap. The fixed coupon was chosen precisely so the fixed leg is worth 100, matching the floating leg.';
+    bL.style.background='var(--fixed)'; bO.style.background='var(--ink-faint)';
+  }
+  function setOis(){
+    fix.textContent='−$100.69'; flo.textContent='+$100.69'; net.textContent='$0.00';
+    note.textContent='Discounting at OIS instead of LIBOR lifts each leg to $100.69. The LIBOR coupons (receiving OIS + 35bp) exceed the OIS discount rates, so present value rises above par — but both legs move together, so the swap is still zero-cost.';
+    bL.style.background='var(--ink-faint)'; bO.style.background='var(--fixed)';
+  }
+  bL.addEventListener('click',setLib); bO.addEventListener('click',setOis); setLib();
+})();
+
+/* carry & slide */
+(function(){
+  const y9=document.getElementById('c_y9'), y10=document.getElementById('c_y10'), yf=document.getElementById('c_yf');
+  const y9v=document.getElementById('c_y9_v'), y10v=document.getElementById('c_y10_v'), yfv=document.getElementById('c_yf_v');
+  const slideEl=document.getElementById('c_slide'), carryEl=document.getElementById('c_carry'), totEl=document.getElementById('c_total'), verdict=document.getElementById('c_verdict');
+  function bp(x){ return (x>=0?'+':'')+x.toFixed(0)+' bp'; }
+  function upd(){
+    const a=+y9.value, b=+y10.value, f=+yf.value;
+    y9v.textContent=a.toFixed(2)+'%'; y10v.textContent=b.toFixed(2)+'%'; yfv.textContent=f.toFixed(2)+'%';
+    const slide=(b-a)*100, carry=(f-b)*100, tot=(f-a)*100;
+    slideEl.textContent=bp(slide); carryEl.textContent=bp(carry); totEl.textContent=bp(tot);
+    totEl.style.color = tot>=0?'var(--spread)':'var(--float)';
+    verdict.innerHTML = tot>0
+      ? '<span class="pill tight">POSITIVE CARRY</span> &nbsp;Receiving fixed earns ~'+tot.toFixed(0)+'bp over the year if the curve holds — the position pays you to wait.'
+      : (tot<0
+        ? '<span class="pill wide">NEGATIVE CARRY</span> &nbsp;The long position bleeds ~'+Math.abs(tot).toFixed(0)+'bp if nothing moves. You need a rally just to break even.'
+        : '<span class="pill wide">FLAT</span> &nbsp;No carry — the curve is locally flat here.');
+  }
+  [y9,y10,yf].forEach(e=>e.addEventListener('input',upd)); upd();
+})();
+
+/* swap-spread driver model */
+(function(){
+  const coefs=[-0.29,-0.417,-0.32,-0.121,0.049], intercept=-2.20, current=-46;
+  const ids=['m0','m1','m2','m3','m4'], vids=['m0v','m1v','m2v','m3v','m4v'];
+  const defs=[5,0,14.3,0,-120];
+  const els=ids.map(i=>document.getElementById(i)), vels=vids.map(i=>document.getElementById(i));
+  const sumEl=document.getElementById('m_sum'), chgEl=document.getElementById('m_chg'), projEl=document.getElementById('m_proj'), verdict=document.getElementById('m_verdict');
+  function fmt(x){ return (x>=0?'+':'−')+Math.abs(x).toFixed(1); }
+  function upd(){
+    let sum=0;
+    els.forEach((e,k)=>{ const v=+e.value; vels[k].textContent=(v<0?'−':'')+Math.abs(v); sum+=coefs[k]*v; });
+    const chg=intercept+sum, proj=current+chg;
+    sumEl.textContent=fmt(sum)+' bp';
+    chgEl.textContent=fmt(chg)+' bp'; chgEl.style.color = chg<0?'var(--spread)':'var(--float)';
+    projEl.textContent=proj.toFixed(0)+' bp';
+    verdict.innerHTML = chg<0
+      ? '<span class="pill tight">NARROWING</span> &nbsp;Drivers point to the 30Y spread tightening by '+Math.abs(chg).toFixed(0)+'bp over six months, toward '+proj.toFixed(0)+'bp.'
+      : '<span class="pill wide">WIDENING</span> &nbsp;Drivers point to the spread widening by '+chg.toFixed(0)+'bp, toward '+proj.toFixed(0)+'bp.';
+  }
+  els.forEach(e=>e.addEventListener('input',upd));
+  document.getElementById('m_reset').addEventListener('click',()=>{ els.forEach((e,k)=>e.value=defs[k]); upd(); });
+  upd();
+})();
+
+/* convexity smile */
+(function(){
+  const cv=document.getElementById('convCanvas'), ctx=cv.getContext('2d');
+  const D30=document.getElementById('d30'), C30=document.getElementById('c30'), D50=document.getElementById('d50'), C50=document.getElementById('c50'), DR=document.getElementById('drag');
+  const vd30=document.getElementById('v_d30'), vc30=document.getElementById('v_c30'), vd50=document.getElementById('v_d50'), vc50=document.getElementById('v_c50'), vdr=document.getElementById('v_drag');
+  const oAtm=document.getElementById('o_atm'), oConv=document.getElementById('o_conv'), oBe=document.getElementById('o_be'), verdict=document.getElementById('o_verdict');
+  const XMIN=-250, XMAX=250;
+  const presets={ base:[19,4.5,27,11,8], flat:[19,6,27,9,8], rich:[19,4.5,27,12,2] };
+
+  function fit(){ const r=cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; cv.width=r.width*dpr; cv.height=(r.width*0.73)*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); cv.style.height=(r.width*0.73)+'px'; }
+
+  function draw(){
+    const d30=+D30.value,c30=+C30.value,d50=+D50.value,c50=+C50.value,drag=+DR.value;
+    vd30.textContent=d30; vc30.textContent=c30; vd50.textContent=d50; vc50.textContent=c50; vdr.textContent=drag;
+    const w=d50/d30;
+    const netConv=c50 - w*c30;                      // smile strength
+    // payoff(dy bp) = 0.5*netConv*(dy/100)^2 - drag, expressed in P/L units
+    const payoff = dyBp => 0.5*netConv*Math.pow(dyBp/100,2) - drag;
+    const recv50 = dyBp => { const dy=dyBp/100; return -d50*dy + 0.5*c50*dy*dy; };   // receive 50Y leg, % notional
+    const pay30w = dyBp => { const dy=dyBp/100; return w*( d30*dy - 0.5*c30*dy*dy ); }; // weighted pay 30Y leg
+
+    const Wc=cv.clientWidth, Hc=cv.clientWidth*0.73, padL=40, padR=42, padT=16, padB=30;
+    const plotW=Wc-padL-padR, plotH=Hc-padT-padB;
+
+    // left axis range from legs, right axis range from payoff
+    let lmin=1e9,lmax=-1e9,rmin=1e9,rmax=-1e9;
+    for(let x=XMIN;x<=XMAX;x+=5){ const a=recv50(x),b=pay30w(x),p=payoff(x); lmin=Math.min(lmin,a,b); lmax=Math.max(lmax,a,b); rmin=Math.min(rmin,p); rmax=Math.max(rmax,p); }
+    const lpad=(lmax-lmin)*0.08; lmin-=lpad; lmax+=lpad;
+    rmin=Math.min(rmin,-2); const rp=(rmax-rmin)*0.12; rmin-=rp; rmax+=rp;
+
+    const X=x=>padL+(x-XMIN)/(XMAX-XMIN)*plotW;
+    const YL=y=>padT+(lmax-y)/(lmax-lmin)*plotH;
+    const YR=y=>padT+(rmax-y)/(rmax-rmin)*plotH;
+
+    ctx.clearRect(0,0,Wc,Hc);
+    ctx.strokeStyle='#23262F'; ctx.lineWidth=1; ctx.font='10px IBM Plex Mono'; ctx.fillStyle='#6A6757';
+    for(let gx=XMIN;gx<=XMAX;gx+=50){ ctx.beginPath(); ctx.moveTo(X(gx),padT); ctx.lineTo(X(gx),padT+plotH); ctx.stroke(); ctx.fillText((gx>0?'+':'')+gx,X(gx)-10,padT+plotH+16); }
+    // zero line (right axis)
+    ctx.strokeStyle='#3A3E49'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(padL,YR(0)); ctx.lineTo(padL+plotW,YR(0)); ctx.stroke();
+    ctx.fillStyle='#6A6757'; ctx.fillText('Δy (bp)', padL+plotW/2-18, padT+plotH+16);
+
+    function plot(fn,Ymap,color,width,dash){ ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash(dash||[]); ctx.beginPath(); let first=true;
+      for(let x=XMIN;x<=XMAX;x+=2){ const px=X(x),py=Ymap(fn(x)); if(first){ctx.moveTo(px,py);first=false;} else ctx.lineTo(px,py);} ctx.stroke(); ctx.setLineDash([]); }
+    plot(recv50,YL,'#B5792A',1.6,[5,4]);    // receive 50Y (ochre, faint)
+    plot(pay30w,YL,'#2D5BA8',1.6,[5,4]);    // pay 30Y weighted (blue, faint)
+    plot(payoff,YR,'#79C79C',3,null);       // flattener payoff (green, bold)
+
+    // breakeven markers (payoff = 0)
+    let bes=[];
+    if(netConv>0.001 && drag>0){ const dyBe=100*Math.sqrt(2*drag/netConv); bes=[-dyBe,dyBe]; }
+    ctx.fillStyle='#79C79C';
+    bes.forEach(b=>{ if(b>=XMIN&&b<=XMAX){ ctx.beginPath(); ctx.arc(X(b),YR(0),4,0,7); ctx.fill(); } });
+
+    oAtm.textContent=payoff(0).toFixed(1); oAtm.style.color = payoff(0)>=0?'#79C79C':'#E0A867';
+    oConv.textContent=(netConv>=0?'+':'')+netConv.toFixed(1);
+    oBe.textContent = bes.length? '±'+Math.round(bes[1])+' bp' : (netConv<=0?'none (no smile)':'±0 bp');
+
+    let msg;
+    if(netConv<=0.05){ msg='With the 50Y no more convex than the (duration-matched) 30Y, the smile vanishes — the trade is just a carry cost with no convexity upside. This is the limiting case.'; }
+    else { msg='Net long convexity of '+netConv.toFixed(1)+': the payoff smiles upward in both directions. You pay '+drag.toFixed(0)+' in carry near the center to own gains that kick in once rates move past ±'+(bes.length?Math.round(bes[1]):0)+'bp — exactly the profile of a long strangle.'; }
+    verdict.innerHTML=msg;
+  }
+  function redraw(){ fit(); draw(); }
+  [D30,C30,D50,C50,DR].forEach(e=>e.addEventListener('input',draw));
+  document.querySelectorAll('#convCanvas ~ .presets button, .lab .presets button').forEach(btn=>btn.addEventListener('click',()=>{ const p=presets[btn.dataset.id]; if(!p)return; D30.value=p[0];C30.value=p[1];D50.value=p[2];C50.value=p[3];DR.value=p[4]; draw(); }));
+  window.addEventListener('resize',redraw);
+  redraw(); setTimeout(redraw,400); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(redraw);
+})();
+
+/* quiz */
+(function(){
+  const data=[
+    {q:'A financial firm issues a fixed-rate bond and then receives fixed in a matched swap. Why, and what does it do to swap spreads?',
+     opts:['To bet rates rise; widens spreads','To convert to a floating liability (ALM); the receiving pulls swap rates down, tightening spreads','To take duration risk; no spread effect','To hedge equity; widens spreads'], correct:1,
+     why:'Issuers want floating liabilities to match floating assets. Issuing fixed + receiving fixed nets to floating. The receiving leg pushes swap rates down relative to Treasuries, so spreads tighten. This is the seasonal "issuance-related receiving" force.'},
+    {q:'On an upward-sloping curve, what is the carry on receiving fixed (a long position)?',
+     opts:['Negative — you bleed','Positive — the forward sits above spot, so you earn while waiting','Zero by construction','Undefined without the coupon'], correct:1,
+     why:'On an upward curve the forward rate is above spot, so carry = forward − spot is positive, and roll-down (slide) adds more. The deck\'s 10Y example earns ~27bp/yr if the curve holds. Long 10s carry positively; paying fixed is negative carry.'},
+    {q:'Why does a floating-rate bond price to par at a reset?',
+     opts:['Because it has no coupon','Because its coupon resets to equal the discount rate, so they cancel','Because of OIS discounting','Because the issuer guarantees par'], correct:1,
+     why:'The floating coupon resets to the prevailing rate, which is also the rate you discount at. Coupon = discount rate means the present value snaps back to 100. That\'s why the fixed leg must also be worth 100 — and the coupon that achieves it is the par swap rate.'},
+    {q:'A duration-neutral pay-30Y / receive-50Y flattener gains under BOTH a big sell-off and a big rally. Why?',
+     opts:['It\'s actually duration-positive','The 50Y is more convex than the 30Y, leaving the trade net long convexity','Carry is always positive','Treasuries are involved'], correct:1,
+     why:'Duration is matched to zero, but the higher-convexity 50Y leg dominates the convexity of the lower-convexity 30Y leg. Net long convexity gives a smiling payoff in either direction — an option profile. You pay for it in negative carry, which sets the breakevens.'}
+  ];
+  const root=document.getElementById('quiz');
+  data.forEach((item,i)=>{
+    const box=document.createElement('div'); box.style.marginBottom='22px';
+    const q=document.createElement('div'); q.className='q'; q.textContent=(i+1)+'. '+item.q; box.appendChild(q);
+    const ex=document.createElement('div'); ex.className='explain'; ex.textContent=item.why;
+    item.opts.forEach((o,j)=>{
+      const btn=document.createElement('button'); btn.className='opt'; btn.textContent=o;
+      btn.addEventListener('click',()=>{
+        [...box.querySelectorAll('.opt')].forEach(b=>b.disabled=true);
+        btn.classList.add(j===item.correct?'correct':'wrong');
+        if(j!==item.correct) box.querySelectorAll('.opt')[item.correct].classList.add('correct');
+        ex.classList.add('show');
+      });
+      box.appendChild(btn);
+    });
+    box.appendChild(ex); root.appendChild(box);
+  });
+})();
+</script>
+</body>
+</html>
