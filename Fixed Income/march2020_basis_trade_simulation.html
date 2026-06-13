@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>March 2020 — The Basis Trade Doom Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: #131825;
+    --panel-light: #1b2233;
+    --border: #2a3147;
+    --text: #e8eaf0;
+    --muted: #7a8398;
+    --green: #4ade80;
+    --green-dim: #2a7a4a;
+    --red: #ef4444;
+    --red-dim: #7a2a2a;
+    --yellow: #fbbf24;
+    --blue: #60a5fa;
+    --cyan: #22d3ee;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter Tight', sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+    background-image:
+      radial-gradient(circle at 10% 0%, rgba(239, 68, 68, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 100%, rgba(96, 165, 250, 0.05) 0%, transparent 40%);
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+  }
+  .header-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--red);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: clamp(34px, 5vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  h1 .accent { color: var(--red); }
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 800px;
+  }
+
+  /* MAIN LAYOUT */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    gap: 20px;
+  }
+  @media (max-width: 1100px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+  }
+  .panel h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  /* LEFT PANEL — Position Summary */
+  .position-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dotted var(--border);
+    font-size: 14px;
+  }
+  .position-row:last-child { border-bottom: none; }
+  .position-label { color: var(--muted); font-size: 12px; }
+  .position-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+  .position-value.pos { color: var(--green); }
+  .position-value.neg { color: var(--red); }
+
+  .pnl-display {
+    text-align: center;
+    padding: 20px 0;
+    margin: 16px 0;
+    background: var(--panel-light);
+    border-radius: 4px;
+  }
+  .pnl-display .label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .pnl-display .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    transition: color 0.3s;
+  }
+  .pnl-display .value.pos { color: var(--green); }
+  .pnl-display .value.neg { color: var(--red); }
+  .pnl-display .value.crit { color: var(--red); animation: alarm 0.4s ease-in-out infinite alternate; }
+  @keyframes alarm {
+    from { text-shadow: 0 0 0 transparent; }
+    to { text-shadow: 0 0 20px var(--red); }
+  }
+
+  .margin-bar {
+    margin: 16px 0 8px;
+    height: 12px;
+    background: var(--panel-light);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .margin-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green) 0%, var(--yellow) 70%, var(--red) 100%);
+    transition: width 0.5s;
+  }
+
+  /* CENTER PANEL — Chart */
+  .chart-panel {
+    min-height: 600px;
+  }
+  .chart-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+  .chart-tab {
+    padding: 8px 14px;
+    background: var(--panel-light);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 3px;
+  }
+  .chart-tab:hover { color: var(--text); }
+  .chart-tab.active {
+    background: var(--bg);
+    color: var(--cyan);
+    border-color: var(--cyan);
+  }
+
+  /* TIMELINE / CONTROLS */
+  .controls {
+    background: var(--panel-light);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+  .day-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .day-info {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .day-info .date {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .day-info .day-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .button-group {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  button:hover:not(:disabled) {
+    background: var(--cyan);
+    color: var(--bg);
+    border-color: var(--cyan);
+  }
+  button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  button.primary {
+    background: var(--red);
+    border-color: var(--red);
+    color: white;
+  }
+  button.primary:hover:not(:disabled) {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    color: white;
+  }
+  button.success {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  /* Slider */
+  input[type="range"] {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    height: 6px;
+    background: var(--bg);
+    border-radius: 3px;
+    outline: none;
+    margin: 12px 0 4px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--cyan);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--cyan);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* CHART */
+  .chart-container {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+  }
+  #chartCanvas { width: 100%; height: 420px; display: block; }
+
+  /* RIGHT PANEL — Event log */
+  .event-log {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  .event-log::-webkit-scrollbar { width: 6px; }
+  .event-log::-webkit-scrollbar-track { background: var(--panel-light); }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .event {
+    padding: 12px 0;
+    border-bottom: 1px dotted var(--border);
+    font-size: 13px;
+    line-height: 1.5;
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .event:last-child { border-bottom: none; }
+  .event-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.1em;
+  }
+  .event-text { color: var(--text); }
+  .event.alert .event-date { color: var(--yellow); }
+  .event.alert .event-text { color: var(--yellow); }
+  .event.critical .event-date { color: var(--red); }
+  .event.critical .event-text { color: var(--red); font-weight: 600; }
+  .event.recovery .event-date { color: var(--green); }
+  .event.recovery .event-text { color: var(--green); }
+
+  /* DOOM LOOP DIAGRAM */
+  .doom-loop {
+    margin-top: 24px;
+    padding: 24px;
+    background: var(--panel);
+    border: 1px solid var(--red-dim);
+    border-radius: 4px;
+  }
+  .doom-loop h3 {
+    color: var(--red);
+    margin-bottom: 20px;
+  }
+
+  /* INFO TOOLTIP */
+  .tip {
+    position: absolute;
+    background: var(--bg);
+    border: 1px solid var(--cyan);
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    pointer-events: none;
+    border-radius: 2px;
+    white-space: nowrap;
+    z-index: 100;
+  }
+
+  /* INTRO */
+  .intro {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--cyan);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .intro strong { color: var(--cyan); }
+
+  /* PHASE BANNER */
+  .phase-banner {
+    margin-bottom: 16px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+    border: 1px solid;
+    transition: all 0.4s;
+  }
+  .phase-banner.calm { background: rgba(74, 222, 128, 0.1); border-color: var(--green); color: var(--green); }
+  .phase-banner.warning { background: rgba(251, 191, 36, 0.1); border-color: var(--yellow); color: var(--yellow); }
+  .phase-banner.crisis { background: rgba(239, 68, 68, 0.1); border-color: var(--red); color: var(--red); }
+  .phase-banner.recovery { background: rgba(96, 165, 250, 0.1); border-color: var(--blue); color: var(--blue); }
+
+  /* GAUGE */
+  .gauge-mini {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 6px 0;
+  }
+  .gauge-mini-label {
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 80px;
+  }
+  .gauge-mini-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .gauge-mini-fill {
+    height: 100%;
+    transition: width 0.4s;
+    border-radius: 3px;
+  }
+  .gauge-mini-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  /* SUMMARY MODAL */
+  .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    margin-top: 24px;
+  }
+  .summary-card h2 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+  .summary-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-stat:last-child { border-bottom: none; }
+  .summary-stat .label { color: var(--muted); font-size: 13px; }
+  .summary-stat .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="header-meta">
+      <span><span class="live-dot"></span>Bloomberg Terminal Simulation · Treasury Basis Desk</span>
+      <span>Acct: LEV-HF-001 / 50x Levered</span>
+    </div>
+    <h1>The <span class="accent">Doom Loop</span></h1>
+    <p class="subtitle">Run a hedge fund's basis trade through March 2020. Step day-by-day and watch how the trade that "always converges" suddenly breaks. Your $100M of equity is levered into a $5B position — same as the real funds.</p>
+  </header>
+
+  <div class="intro">
+    <strong>How to play:</strong> You're long $5B of cash 10Y Treasuries, short an equivalent DV01 of TY futures, financed in repo. The trade earns ~5 ticks of "basis convergence" by delivery. Click <strong>NEXT DAY</strong> to advance through Feb–April 2020. Watch the <strong>basis</strong>, your <strong>P&amp;L</strong>, and your <strong>margin</strong>. If margin call goes red — you must liquidate. That's the doom loop.
+  </div>
+
+  <div class="main-grid">
+
+    <!-- LEFT PANEL -->
+    <aside>
+      <div class="panel">
+        <h3>Your Position</h3>
+        <div class="position-row">
+          <span class="position-label">Cash bonds (long)</span>
+          <span class="position-value pos">+$5.0B</span>
+        </div>
+        <div class="position-row">
+          <span class="position-label">TY futures (short)</span>
+          <span class="position-value neg" id="futShort">-50,000</span>
+        </div>
+        <div class="position-row">
+          <span class="position-label">Repo borrowed</span>
+          <span class="position-value" id="repoOut">$4.9B</span>
+        </div>
+        <div class="position-row">
+          <span class="position-label">Equity capital</span>
+          <span class="position-value" id="equityVal">$100M</span>
+        </div>
+        <div class="position-row">
+          <span class="position-label">Leverage</span>
+          <span class="position-value" id="leverageVal">50.0x</span>
+        </div>
+
+        <div class="pnl-display">
+          <div class="label">Cumulative P&L</div>
+          <div class="value pos" id="pnlVal">$0</div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">
+            <span>Margin Health</span>
+            <span id="marginPct">100%</span>
+          </div>
+          <div class="margin-bar"><div class="margin-fill" id="marginFill" style="width:100%"></div></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="marginStatus">Healthy — broker happy</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px;">
+        <h3>Market Conditions</h3>
+        <div class="gauge-mini">
+          <span class="gauge-mini-label">VIX</span>
+          <div class="gauge-mini-bar"><div class="gauge-mini-fill" id="vixFill" style="background:var(--green);width:15%"></div></div>
+          <span class="gauge-mini-value" id="vixVal">15</span>
+        </div>
+        <div class="gauge-mini">
+          <span class="gauge-mini-label">Repo Stress</span>
+          <div class="gauge-mini-bar"><div class="gauge-mini-fill" id="repoFill" style="background:var(--green);width:10%"></div></div>
+          <span class="gauge-mini-value" id="repoStress">low</span>
+        </div>
+        <div class="gauge-mini">
+          <span class="gauge-mini-label">Dealer B/S</span>
+          <div class="gauge-mini-bar"><div class="gauge-mini-fill" id="dealerFill" style="background:var(--green);width:20%"></div></div>
+          <span class="gauge-mini-value" id="dealerVal">open</span>
+        </div>
+        <div class="gauge-mini">
+          <span class="gauge-mini-label">Fed Actions</span>
+          <div class="gauge-mini-bar"><div class="gauge-mini-fill" id="fedFill" style="background:var(--muted);width:0%"></div></div>
+          <span class="gauge-mini-value" id="fedVal">none</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <main>
+      <div class="phase-banner calm" id="phaseBanner">Phase 1 of 4 · Calm Markets · Trade is grinding out profit as expected</div>
+
+      <div class="controls">
+        <div class="day-display">
+          <div class="day-info">
+            <div class="date" id="currentDate">Mon, Feb 03, 2020</div>
+            <div class="day-label">Day <span id="dayNum">1</span> of 60 · Pre-Crisis</div>
+          </div>
+          <div class="button-group">
+            <button id="prevBtn" disabled>◀ Prev</button>
+            <button id="nextBtn" class="primary">Next Day ▶</button>
+            <button id="playBtn">▶ Play</button>
+            <button id="resetBtn">↺ Reset</button>
+          </div>
+        </div>
+        <input type="range" id="daySlider" min="1" max="60" value="1">
+        <div class="slider-labels">
+          <span>Feb 3</span>
+          <span>Feb 24 (panic begins)</span>
+          <span>Mar 9 (basis breaks)</span>
+          <span>Mar 23 (Fed)</span>
+          <span>Apr 24</span>
+        </div>
+      </div>
+
+      <div class="chart-tabs">
+        <div class="chart-tab active" data-chart="basis">The Basis</div>
+        <div class="chart-tab" data-chart="pnl">P&L</div>
+        <div class="chart-tab" data-chart="prices">Cash vs Futures</div>
+        <div class="chart-tab" data-chart="positions">Industry Positions</div>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="chartCanvas"></canvas>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <aside>
+      <div class="panel">
+        <h3>Event Log</h3>
+        <div class="event-log" id="eventLog"></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- DOOM LOOP DIAGRAM -->
+  <div class="doom-loop" id="doomLoop" style="display:none;">
+    <h3>⚠ The Doom Loop is Active</h3>
+    <svg viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" font-family="'Inter Tight', sans-serif" style="width:100%;height:auto;">
+      <defs>
+        <marker id="redArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L9,3 L0,6 Z" fill="#ef4444"/>
+        </marker>
+      </defs>
+
+      <!-- Step 1 -->
+      <g>
+        <rect x="20" y="60" width="180" height="80" fill="#131825" stroke="#ef4444" stroke-width="1.5" rx="4"/>
+        <text x="110" y="85" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="700" letter-spacing="1">STEP 1</text>
+        <text x="110" y="108" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">Cash bonds fall</text>
+        <text x="110" y="125" text-anchor="middle" fill="#7a8398" font-size="11">Investors dump for cash</text>
+      </g>
+      <line x1="200" y1="100" x2="245" y2="100" stroke="#ef4444" stroke-width="2" marker-end="url(#redArrow)"/>
+
+      <!-- Step 2 -->
+      <g>
+        <rect x="250" y="60" width="180" height="80" fill="#131825" stroke="#ef4444" stroke-width="1.5" rx="4"/>
+        <text x="340" y="85" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="700" letter-spacing="1">STEP 2</text>
+        <text x="340" y="108" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">Basis widens</text>
+        <text x="340" y="125" text-anchor="middle" fill="#7a8398" font-size="11">Cash dropped &gt; futures</text>
+      </g>
+      <line x1="430" y1="100" x2="475" y2="100" stroke="#ef4444" stroke-width="2" marker-end="url(#redArrow)"/>
+
+      <!-- Step 3 -->
+      <g>
+        <rect x="480" y="60" width="180" height="80" fill="#131825" stroke="#ef4444" stroke-width="1.5" rx="4"/>
+        <text x="570" y="85" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="700" letter-spacing="1">STEP 3</text>
+        <text x="570" y="108" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">Margin call</text>
+        <text x="570" y="125" text-anchor="middle" fill="#7a8398" font-size="11">Funds must post cash</text>
+      </g>
+      <line x1="660" y1="100" x2="705" y2="100" stroke="#ef4444" stroke-width="2" marker-end="url(#redArrow)"/>
+
+      <!-- Step 4 -->
+      <g>
+        <rect x="710" y="60" width="180" height="80" fill="#131825" stroke="#ef4444" stroke-width="1.5" rx="4"/>
+        <text x="800" y="85" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="700" letter-spacing="1">STEP 4</text>
+        <text x="800" y="108" text-anchor="middle" fill="#e8eaf0" font-size="13" font-weight="600">Forced sell bonds</text>
+        <text x="800" y="125" text-anchor="middle" fill="#7a8398" font-size="11">Liquidate at any price</text>
+      </g>
+
+      <!-- Loop arrow back to Step 1 -->
+      <path d="M 800 140 Q 800 220, 450 220 Q 110 220, 110 140" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#redArrow)" stroke-dasharray="6,4"/>
+      <text x="450" y="245" text-anchor="middle" fill="#ef4444" font-size="14" font-style="italic" font-weight="600">↻ Selling drives cash bonds even lower — the loop intensifies</text>
+    </svg>
+  </div>
+
+  <!-- SUMMARY (shown at end) -->
+  <div class="summary-card" id="summaryCard" style="display:none;">
+    <h2>The Post-Mortem</h2>
+    <div class="summary-stat">
+      <span class="label">Peak basis widening</span>
+      <span class="value" id="peakBasis" style="color:var(--red);">—</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Maximum drawdown</span>
+      <span class="value" id="maxDD" style="color:var(--red);">—</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Outcome</span>
+      <span class="value" id="outcome">—</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Final equity</span>
+      <span class="value" id="finalEq">—</span>
+    </div>
+    <p style="margin-top:20px;color:var(--muted);font-size:13px;line-height:1.6;">
+      <strong style="color:var(--text);">What just happened, in plain English:</strong> A trade that earned reliable pennies for years — buying Treasuries, shorting futures, financing in repo — exploded because everyone tried to sell their Treasury inventory at the exact same moment in mid-March 2020. Cash bonds fell faster than futures, the "basis" widened instead of converging, and leveraged funds got hit with margin calls that forced them to sell their cash bonds, which pushed bond prices down further. Classic positive feedback loop. The Fed eventually stopped it by buying Treasuries directly and opening emergency repo facilities — but not before billions of dollars were vaporized. This is the event that the J.P. Morgan paper refers to as <em style="color:var(--yellow);">"the cleanout in positioning among the leveraged fund community."</em>
+    </p>
+  </div>
+
+</div>
+
+<script>
+// ============================================
+// SIMULATION DATA — Calibrated to March 2020
+// ============================================
+
+// 60-day timeline: Feb 3, 2020 → Apr 24, 2020 (business days only)
+const dates = [];
+const startDate = new Date(2020, 1, 3); // Feb 3, 2020
+let d = new Date(startDate);
+while (dates.length < 60) {
+  const day = d.getDay();
+  if (day !== 0 && day !== 6) dates.push(new Date(d));
+  d.setDate(d.getDate() + 1);
+}
+
+// Calibrated price/basis data based on actual March 2020 events
+// Cash bond price (per $100), Futures price, Basis (cash - fut*CF) in cents
+// CF assumed ~0.85 for ~7yr CTD (TY); converted into 32nds for readability
+function generateSimData() {
+  const data = [];
+  for (let i = 0; i < 60; i++) {
+    let phase, cash, fut, basis, vix, repoStress, dealer, fed;
+
+    if (i < 14) {
+      // Phase 1: Calm (Feb 3 - Feb 20)
+      phase = 'calm';
+      cash = 109.5 + Math.sin(i*0.4)*0.15 + i*0.01;
+      fut = 129.0 + Math.sin(i*0.4)*0.12 + i*0.012;
+      basis = 8 - i*0.3 + Math.random()*0.5; // gentle convergence
+      vix = 15 + Math.random()*3;
+      repoStress = 5 + Math.random()*5;
+      dealer = 20;
+      fed = 0;
+    } else if (i < 21) {
+      // Phase 2: Initial COVID worry, flight-TO-quality (Feb 20 - Mar 2)
+      phase = 'warning';
+      cash = 110.0 + (i-14)*0.4; // bonds rally as flight to safety
+      fut = 129.5 + (i-14)*0.42;
+      basis = 6 - (i-14)*0.3 + Math.random()*0.6;
+      vix = 18 + (i-14)*3;
+      repoStress = 10 + (i-14)*2;
+      dealer = 30 + (i-14)*3;
+      fed = 0;
+    } else if (i < 27) {
+      // Phase 3: Vol spike, basis starts cracking (Mar 2 - Mar 10)
+      phase = 'warning';
+      const t = i - 21;
+      cash = 112.5 + t*0.3 - t*t*0.04; // peak rally then turns
+      fut = 132.0 + t*0.35 - t*t*0.03;
+      basis = 4 + t*1.5 + Math.random()*1.0; // basis widening!
+      vix = 35 + t*5;
+      repoStress = 22 + t*4;
+      dealer = 50 + t*5;
+      fed = t > 3 ? 5 : 0;
+    } else if (i < 36) {
+      // Phase 4: FULL CRISIS - basis explodes (Mar 10 - Mar 23)
+      phase = 'crisis';
+      const t = i - 27;
+      cash = 113.5 - t*0.5; // Treasuries SELLING OFF in a flight to cash!
+      fut = 133.5 - t*0.3; // futures fall less because of basis trade unwind
+      basis = 13 + t*3.5 + Math.random()*2.5; // EXPLODING
+      vix = 65 + t*2 - (t > 5 ? (t-5)*3 : 0);
+      repoStress = 55 + t*5 - (t > 5 ? (t-5)*4 : 0);
+      dealer = 80 + Math.min(t*2, 15);
+      fed = t > 2 ? 20 + t*8 : 5;
+    } else if (i < 45) {
+      // Phase 5: Fed intervention - stabilization (Mar 23 - Apr 3)
+      phase = 'recovery';
+      const t = i - 36;
+      cash = 109.0 + t*0.4 + Math.random()*0.2;
+      fut = 130.5 + t*0.25;
+      basis = Math.max(45 - t*5, 8) + Math.random()*1.5; // recovering
+      vix = 60 - t*3;
+      repoStress = 70 - t*6;
+      dealer = 90 - t*3;
+      fed = 95;
+    } else {
+      // Phase 6: Post-crisis new normal (Apr 3 - Apr 24)
+      phase = 'recovery';
+      const t = i - 45;
+      cash = 112.5 + Math.sin(t*0.3)*0.3 + t*0.05;
+      fut = 132.5 + Math.sin(t*0.3)*0.25 + t*0.04;
+      basis = 6 + Math.random()*1 - t*0.1;
+      vix = 38 - t*0.6;
+      repoStress = 22 - t*0.8;
+      dealer = 70 - t*1.5;
+      fed = 95;
+    }
+
+    data.push({
+      date: dates[i],
+      cash: parseFloat(cash.toFixed(3)),
+      fut: parseFloat(fut.toFixed(3)),
+      basis: parseFloat(basis.toFixed(2)), // in 32nds (cents)
+      vix: Math.round(vix),
+      repoStress: Math.min(100, Math.round(repoStress)),
+      dealer: Math.min(100, Math.round(dealer)),
+      fed: Math.min(100, Math.round(fed)),
+      phase
+    });
+  }
+  return data;
+}
+
+const simData = generateSimData();
+
+// ============================================
+// EVENTS — Real and pedagogical
+// ============================================
+const events = {
+  1: { type:'normal', text:'Trade initiated. Long $5B 10Y Treasuries, short 50,000 TY futures. Earn ~5 ticks of basis convergence over the quarter.' },
+  5: { type:'normal', text:'Mild grind. Basis tightening as expected. Daily P&L: small but consistent positive carry.' },
+  14: { type:'normal', text:'WHO declares COVID-19 a global health emergency. Markets begin watching closely.' },
+  16: { type:'alert', text:'Flight to quality: investors buying Treasuries as equities sell off. Bond prices rally — good for our cash position, futures rally too.' },
+  20: { type:'alert', text:'VIX above 30. Cross-asset volatility surging. Repo desks starting to ask questions.' },
+  22: { type:'alert', text:'Mar 5: Fed makes emergency 50bp cut. Bonds rally hard. Basis still well-behaved.' },
+  25: { type:'alert', text:'Mar 9: Crude oil collapses 30% (Saudi/Russia war). Total panic. Some funds need cash NOW.' },
+  27: { type:'critical', text:'Mar 11: Dealer balance sheets at capacity. They cannot warehouse more Treasuries. Bid-offer widening.' },
+  29: { type:'critical', text:'Mar 13: HISTORIC SELL-OFF in Treasuries despite stock crash. Investors dumping bonds to raise USD cash.' },
+  30: { type:'critical', text:'Mar 16: Basis blows out. Cash bonds falling FASTER than futures. The "convergence trade" is now divergent.' },
+  31: { type:'critical', text:'Mar 17: First margin calls hitting basis funds. Some begin liquidating cash bond inventory — which makes cash drop further.' },
+  33: { type:'critical', text:'Mar 19: Reports of major basis funds blowing up. Position unwinds accelerating. Doom loop in full swing.' },
+  35: { type:'critical', text:'Mar 20: SOFR/Treasury repo dislocated. Cost of financing exploding. Carry on the trade is now NEGATIVE.' },
+  37: { type:'recovery', text:'Mar 23: 🏦 FED GOES NUCLEAR. Announces unlimited QE, $375B Treasury buying that week. Doom loop interrupted.' },
+  39: { type:'recovery', text:'Fed buying $75B/day of Treasuries. Dealer balance sheets relieved. Basis starts grinding tighter.' },
+  44: { type:'recovery', text:'Apr 1: Basis halfway back to normal. But damage done — leveraged fund gross shorts permanently lower.' },
+  55: { type:'recovery', text:'Late April: Market structure resembles pre-crisis. But the levered basis community is HALF its previous size.' },
+  60: { type:'recovery', text:'Sim complete. This is the moment the J.P. Morgan paper was written. "Cleanout in positioning among the leveraged fund community" — that\'s the event you just lived through.' }
+};
+
+// ============================================
+// SIMULATION STATE
+// ============================================
+let currentDay = 1;
+let isPlaying = false;
+let playInterval = null;
+let activeChart = 'basis';
+const equity0 = 100_000_000; // $100M
+const notional = 5_000_000_000; // $5B
+const dv01PerTick = 47000; // dollars of P&L per 1/32 move per $5B notional (approx)
+
+// We track P&L = -(basis_today - basis_start) * dv01PerTick / 32 * (basis ticks count)
+// because we are LONG basis (short futures + long cash) → if basis widens, we LOSE
+
+function computePnL(day) {
+  const startBasis = simData[0].basis;
+  const currentBasis = simData[day-1].basis;
+  // basis is in 32nds; widening = bad for us (we are long the basis)
+  // Actually: we make money when basis tightens (converges)
+  // So P&L = (startBasis - currentBasis) * dollarPerTick
+  const dollarPerTick32 = (notional / 100) * (1/32); // ≈ $1.56M per full point on $5B; per 1/32 ≈ $48,800
+  const ticks = startBasis - currentBasis;
+  return ticks * dollarPerTick32;
+}
+
+function getEquity(day) {
+  return equity0 + computePnL(day);
+}
+
+function getMarginHealth(day) {
+  // Margin requirement = ~2% of notional = $100M (our starting equity)
+  // As equity erodes, margin health drops
+  const eq = getEquity(day);
+  return Math.max(0, Math.min(100, (eq / equity0) * 100));
+}
+
+// ============================================
+// RENDERING
+// ============================================
+
+const canvas = document.getElementById('chartCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+}
+
+function drawChart() {
+  resizeCanvas();
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height;
+  const pad = { l: 60, r: 60, t: 30, b: 40 };
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  ctx.strokeStyle = '#1b2233';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.t + (ch/5)*i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  }
+
+  // Get data
+  const days = Array.from({length: currentDay}, (_, i) => i+1);
+  let values, label, color, format, range;
+
+  if (activeChart === 'basis') {
+    values = simData.slice(0, currentDay).map(d => d.basis);
+    label = 'Basis (32nds, cash − futures × CF)';
+    color = '#ef4444';
+    format = v => v.toFixed(1) + '/32';
+    range = [0, 60];
+  } else if (activeChart === 'pnl') {
+    values = days.map(d => computePnL(d) / 1_000_000);
+    label = 'Cumulative P&L ($ millions)';
+    color = values[values.length-1] >= 0 ? '#4ade80' : '#ef4444';
+    format = v => '$' + v.toFixed(1) + 'M';
+    range = [-120, 30];
+  } else if (activeChart === 'prices') {
+    // dual series: cash + fut
+    drawDualPriceChart(W, H, pad, cw, ch);
+    return;
+  } else if (activeChart === 'positions') {
+    drawPositionChart(W, H, pad, cw, ch);
+    return;
+  }
+
+  // Y-axis labels
+  ctx.fillStyle = '#7a8398';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const v = range[1] - (range[1] - range[0]) * (i/5);
+    const y = pad.t + (ch/5)*i;
+    ctx.fillText(format(v).replace('$',''), pad.l - 8, y+4);
+  }
+
+  // X-axis labels (every ~10 days)
+  ctx.textAlign = 'center';
+  for (let i = 0; i < 60; i += 10) {
+    const x = pad.l + (cw / 59) * i;
+    const dt = simData[i].date;
+    const lbl = dt.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    ctx.fillText(lbl, x, H - 12);
+  }
+
+  // Zero line for P&L
+  if (activeChart === 'pnl') {
+    const zeroY = pad.t + ch * (range[1] / (range[1] - range[0]));
+    ctx.strokeStyle = '#3a4561';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(W-pad.r, zeroY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Phase backgrounds
+  const phases = [
+    {start:0, end:14, color:'rgba(74, 222, 128, 0.05)'},
+    {start:14, end:27, color:'rgba(251, 191, 36, 0.05)'},
+    {start:27, end:36, color:'rgba(239, 68, 68, 0.08)'},
+    {start:36, end:60, color:'rgba(96, 165, 250, 0.05)'},
+  ];
+  phases.forEach(p => {
+    if (p.start >= currentDay) return;
+    const x1 = pad.l + (cw / 59) * p.start;
+    const x2 = pad.l + (cw / 59) * Math.min(p.end, currentDay-1);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(x1, pad.t, x2-x1, ch);
+  });
+
+  // Plot line (always show whole 60-day range in axis, but only draw up to currentDay)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = pad.l + (cw / 59) * i;
+    const y = pad.t + ch * (1 - (v - range[0])/(range[1]-range[0]));
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Fill below for P&L when negative
+  if (activeChart === 'pnl') {
+    ctx.fillStyle = color === '#4ade80' ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)';
+    const zeroY = pad.t + ch * (range[1] / (range[1] - range[0]));
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = pad.l + (cw / 59) * i;
+      const y = pad.t + ch * (1 - (v - range[0])/(range[1]-range[0]));
+      if (i === 0) ctx.moveTo(x, zeroY);
+      ctx.lineTo(x, y);
+    });
+    ctx.lineTo(pad.l + (cw/59)*(values.length-1), zeroY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Highlight current point
+  const lastX = pad.l + (cw / 59) * (currentDay-1);
+  const lastY = pad.t + ch * (1 - (values[values.length-1] - range[0])/(range[1]-range[0]));
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#0a0e1a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Current value annotation
+  ctx.fillStyle = color;
+  ctx.font = 'bold 13px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText(format(values[values.length-1]), lastX + 10, lastY + 4);
+
+  // Chart title
+  ctx.fillStyle = '#e8eaf0';
+  ctx.font = '12px Inter Tight';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, pad.l, 18);
+}
+
+function drawDualPriceChart(W, H, pad, cw, ch) {
+  // Two series: cash and futures, normalized to start = 100
+  const cashSeries = simData.slice(0, currentDay).map(d => 100 * d.cash / simData[0].cash);
+  const futSeries = simData.slice(0, currentDay).map(d => 100 * d.fut / simData[0].fut);
+  const all = [...cashSeries, ...futSeries];
+  const lo = Math.min(...all) - 0.3;
+  const hi = Math.max(...all) + 0.3;
+
+  // Y-axis
+  ctx.fillStyle = '#7a8398';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const v = hi - (hi - lo) * (i/5);
+    const y = pad.t + (ch/5)*i;
+    ctx.fillText(v.toFixed(1), pad.l - 8, y+4);
+  }
+
+  // X labels
+  ctx.textAlign = 'center';
+  for (let i = 0; i < 60; i += 10) {
+    const x = pad.l + (cw / 59) * i;
+    ctx.fillText(simData[i].date.toLocaleDateString('en-US',{month:'short',day:'numeric'}), x, H-12);
+  }
+
+  // Cash line
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  cashSeries.forEach((v, i) => {
+    const x = pad.l + (cw/59)*i;
+    const y = pad.t + ch * (1 - (v-lo)/(hi-lo));
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Futures line
+  ctx.strokeStyle = '#22d3ee';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  futSeries.forEach((v, i) => {
+    const x = pad.l + (cw/59)*i;
+    const y = pad.t + ch * (1 - (v-lo)/(hi-lo));
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Shade the basis between them
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+  ctx.beginPath();
+  cashSeries.forEach((v, i) => {
+    const x = pad.l + (cw/59)*i;
+    const y = pad.t + ch * (1 - (v-lo)/(hi-lo));
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  for (let i = futSeries.length-1; i >= 0; i--) {
+    const x = pad.l + (cw/59)*i;
+    const y = pad.t + ch * (1 - (futSeries[i]-lo)/(hi-lo));
+    ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Legend
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 12px Inter Tight';
+  ctx.textAlign = 'left';
+  ctx.fillText('● Cash bonds (indexed to 100)', pad.l, 18);
+  ctx.fillStyle = '#22d3ee';
+  ctx.fillText('● Futures (indexed to 100)', pad.l + 220, 18);
+  ctx.fillStyle = '#e8eaf0';
+  ctx.font = '11px Inter Tight';
+  ctx.fillText('Gap = the basis', pad.l + 410, 18);
+}
+
+function drawPositionChart(W, H, pad, cw, ch) {
+  // Industry lev fund gross shorts proxy
+  const positions = simData.slice(0, currentDay).map((d,i) => {
+    if (i < 27) return 100; // pre-crisis
+    if (i < 36) return 100 - (i-27)*7; // collapse
+    return Math.max(45, 100 - (i-27)*7 + (i-36)*0.2); // stays low
+  });
+
+  ctx.fillStyle = '#7a8398';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const v = 100 - i*20;
+    const y = pad.t + (ch/5)*i;
+    ctx.fillText(v + '%', pad.l - 8, y+4);
+  }
+  ctx.textAlign = 'center';
+  for (let i = 0; i < 60; i += 10) {
+    const x = pad.l + (cw/59)*i;
+    ctx.fillText(simData[i].date.toLocaleDateString('en-US',{month:'short',day:'numeric'}), x, H-12);
+  }
+
+  // Area chart
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + ch);
+  positions.forEach((v, i) => {
+    const x = pad.l + (cw/59)*i;
+    const y = pad.t + ch * (1 - v/100);
+    ctx.lineTo(x,y);
+  });
+  ctx.lineTo(pad.l + (cw/59)*(positions.length-1), pad.t + ch);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  positions.forEach((v, i) => {
+    const x = pad.l + (cw/59)*i;
+    const y = pad.t + ch * (1 - v/100);
+    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Annotation
+  if (currentDay > 30) {
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'italic 12px Fraunces';
+    ctx.textAlign = 'center';
+    ctx.fillText('The Cleanout', pad.l + cw*0.5, pad.t + ch*0.7);
+    ctx.font = '10px Inter Tight';
+    ctx.fillStyle = '#7a8398';
+    ctx.fillText('Industry-wide gross shorts collapse and never recover', pad.l + cw*0.5, pad.t + ch*0.7 + 16);
+  }
+
+  ctx.fillStyle = '#e8eaf0';
+  ctx.font = '12px Inter Tight';
+  ctx.textAlign = 'left';
+  ctx.fillText('Industry Leveraged Fund Gross Shorts (indexed to 100 = pre-crisis)', pad.l, 18);
+}
+
+// ============================================
+// UI UPDATES
+// ============================================
+
+function fmtMoney(v) {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '-' : v > 0 ? '+' : '';
+  if (abs >= 1e9) return sign + '$' + (abs/1e9).toFixed(2) + 'B';
+  if (abs >= 1e6) return sign + '$' + (abs/1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return sign + '$' + (abs/1e3).toFixed(1) + 'K';
+  return sign + '$' + abs.toFixed(0);
+}
+
+function updateUI() {
+  const dat = simData[currentDay-1];
+  const eq = getEquity(currentDay);
+  const pnl = computePnL(currentDay);
+  const marginHealth = getMarginHealth(currentDay);
+
+  // Date display
+  document.getElementById('currentDate').textContent =
+    dat.date.toLocaleDateString('en-US',{weekday:'short', month:'short', day:'2-digit', year:'numeric'});
+  document.getElementById('dayNum').textContent = currentDay;
+
+  // Position
+  document.getElementById('equityVal').textContent = fmtMoney(eq);
+  document.getElementById('leverageVal').textContent = (notional/Math.max(eq,1e6)).toFixed(1) + 'x';
+
+  // P&L
+  const pnlEl = document.getElementById('pnlVal');
+  pnlEl.textContent = fmtMoney(pnl);
+  pnlEl.className = 'value ' + (pnl >= 0 ? 'pos' : (marginHealth < 20 ? 'crit' : 'neg'));
+
+  // Margin
+  document.getElementById('marginPct').textContent = Math.round(marginHealth) + '%';
+  const mFill = document.getElementById('marginFill');
+  mFill.style.width = marginHealth + '%';
+  const mStatus = document.getElementById('marginStatus');
+  if (marginHealth > 70) {
+    mStatus.textContent = 'Healthy — broker happy';
+    mStatus.style.color = 'var(--green)';
+  } else if (marginHealth > 40) {
+    mStatus.textContent = 'Watch list — daily check-in from broker';
+    mStatus.style.color = 'var(--yellow)';
+  } else if (marginHealth > 15) {
+    mStatus.textContent = 'MARGIN CALL — post cash or liquidate';
+    mStatus.style.color = 'var(--red)';
+  } else {
+    mStatus.textContent = 'BLOWUP — forced liquidation';
+    mStatus.style.color = 'var(--red)';
+  }
+
+  // Phase banner
+  const banner = document.getElementById('phaseBanner');
+  banner.className = 'phase-banner ' + dat.phase;
+  const phaseText = {
+    calm: 'Phase 1 of 4 · Calm Markets · Trade is grinding out profit as expected',
+    warning: 'Phase 2 of 4 · Volatility Rising · Watch for cracks in the basis',
+    crisis: '🚨 Phase 3 of 4 · CRISIS · The doom loop is active. Margin calls cascading.',
+    recovery: 'Phase 4 of 4 · Fed-Induced Recovery · Backstop has stopped the bleeding'
+  };
+  banner.textContent = phaseText[dat.phase];
+
+  // Market gauges
+  document.getElementById('vixVal').textContent = dat.vix;
+  document.getElementById('vixFill').style.width = Math.min(100, dat.vix*1.1) + '%';
+  document.getElementById('vixFill').style.background = dat.vix > 40 ? 'var(--red)' : dat.vix > 25 ? 'var(--yellow)' : 'var(--green)';
+
+  document.getElementById('repoStress').textContent = dat.repoStress > 60 ? 'severe' : dat.repoStress > 30 ? 'elevated' : 'low';
+  document.getElementById('repoFill').style.width = dat.repoStress + '%';
+  document.getElementById('repoFill').style.background = dat.repoStress > 50 ? 'var(--red)' : dat.repoStress > 25 ? 'var(--yellow)' : 'var(--green)';
+
+  document.getElementById('dealerVal').textContent = dat.dealer > 70 ? 'closed' : dat.dealer > 40 ? 'tight' : 'open';
+  document.getElementById('dealerFill').style.width = dat.dealer + '%';
+  document.getElementById('dealerFill').style.background = dat.dealer > 60 ? 'var(--red)' : dat.dealer > 35 ? 'var(--yellow)' : 'var(--green)';
+
+  document.getElementById('fedVal').textContent = dat.fed > 80 ? 'unlimited QE' : dat.fed > 30 ? 'TOMOs' : dat.fed > 0 ? 'monitoring' : 'none';
+  document.getElementById('fedFill').style.width = dat.fed + '%';
+  document.getElementById('fedFill').style.background = dat.fed > 0 ? 'var(--blue)' : 'var(--muted)';
+
+  // Slider
+  document.getElementById('daySlider').value = currentDay;
+
+  // Buttons
+  document.getElementById('prevBtn').disabled = currentDay <= 1;
+  document.getElementById('nextBtn').disabled = currentDay >= 60;
+
+  // Doom loop visibility
+  document.getElementById('doomLoop').style.display = (dat.phase === 'crisis') ? 'block' : 'none';
+
+  // Summary
+  if (currentDay >= 60) {
+    showSummary();
+  } else {
+    document.getElementById('summaryCard').style.display = 'none';
+  }
+
+  drawChart();
+}
+
+function addEvent(day, force) {
+  const ev = events[day];
+  if (!ev) return;
+  const log = document.getElementById('eventLog');
+  const div = document.createElement('div');
+  div.className = 'event ' + (ev.type || 'normal');
+  const dt = simData[day-1].date;
+  div.innerHTML = `
+    <div class="event-date">Day ${day} · ${dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+    <div class="event-text">${ev.text}</div>
+  `;
+  log.insertBefore(div, log.firstChild);
+}
+
+function rebuildEventLog() {
+  const log = document.getElementById('eventLog');
+  log.innerHTML = '';
+  for (let d = 1; d <= currentDay; d++) {
+    if (events[d]) {
+      const ev = events[d];
+      const div = document.createElement('div');
+      div.className = 'event ' + (ev.type || 'normal');
+      const dt = simData[d-1].date;
+      div.innerHTML = `
+        <div class="event-date">Day ${d} · ${dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+        <div class="event-text">${ev.text}</div>
+      `;
+      log.insertBefore(div, log.firstChild);
+    }
+  }
+}
+
+function showSummary() {
+  const peakBasis = Math.max(...simData.map(d => d.basis));
+  let minEq = equity0;
+  for (let i = 1; i <= 60; i++) {
+    minEq = Math.min(minEq, getEquity(i));
+  }
+  const maxDD = minEq - equity0;
+  const finalEq = getEquity(60);
+
+  document.getElementById('peakBasis').textContent = peakBasis.toFixed(1) + '/32 (' + (peakBasis/8).toFixed(1) + 'x normal)';
+  document.getElementById('maxDD').textContent = fmtMoney(maxDD) + ' (' + ((maxDD/equity0)*100).toFixed(0) + '% of equity)';
+  document.getElementById('finalEq').textContent = fmtMoney(finalEq);
+
+  const minMargin = (minEq / equity0) * 100;
+  const outcomeEl = document.getElementById('outcome');
+  if (minMargin < 15) {
+    outcomeEl.textContent = 'FUND BLOWN UP — forced liquidation';
+    outcomeEl.style.color = 'var(--red)';
+  } else if (minMargin < 40) {
+    outcomeEl.textContent = 'Severe drawdown but survived';
+    outcomeEl.style.color = 'var(--yellow)';
+  } else {
+    outcomeEl.textContent = 'Bruised but operational';
+    outcomeEl.style.color = 'var(--green)';
+  }
+
+  document.getElementById('summaryCard').style.display = 'block';
+}
+
+// ============================================
+// CONTROLS
+// ============================================
+
+function step(dir) {
+  const newDay = currentDay + dir;
+  if (newDay < 1 || newDay > 60) return;
+  currentDay = newDay;
+  if (events[currentDay] && dir > 0) addEvent(currentDay);
+  else if (dir < 0) rebuildEventLog();
+  updateUI();
+}
+
+document.getElementById('nextBtn').onclick = () => step(1);
+document.getElementById('prevBtn').onclick = () => step(-1);
+
+document.getElementById('resetBtn').onclick = () => {
+  currentDay = 1;
+  if (isPlaying) togglePlay();
+  document.getElementById('eventLog').innerHTML = '';
+  addEvent(1);
+  updateUI();
+};
+
+function togglePlay() {
+  isPlaying = !isPlaying;
+  const btn = document.getElementById('playBtn');
+  if (isPlaying) {
+    btn.textContent = '⏸ Pause';
+    btn.classList.add('success');
+    playInterval = setInterval(() => {
+      if (currentDay >= 60) {
+        togglePlay();
+        return;
+      }
+      step(1);
+    }, 250);
+  } else {
+    btn.textContent = '▶ Play';
+    btn.classList.remove('success');
+    clearInterval(playInterval);
+  }
+}
+document.getElementById('playBtn').onclick = togglePlay;
+
+document.getElementById('daySlider').oninput = (e) => {
+  currentDay = parseInt(e.target.value);
+  rebuildEventLog();
+  updateUI();
+};
+
+document.querySelectorAll('.chart-tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.chart-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    activeChart = t.dataset.chart;
+    drawChart();
+  };
+});
+
+window.addEventListener('resize', drawChart);
+
+// ============================================
+// INIT
+// ============================================
+addEvent(1);
+updateUI();
+</script>
+
+</body>
+</html>

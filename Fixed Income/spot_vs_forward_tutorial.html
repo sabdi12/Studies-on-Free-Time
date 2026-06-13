@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spot vs Forward Rates — The Einstein Tutorial</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f5f0e8;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    --red: #b5341a;
+    --blue: #1a3a5c;
+    --green: #1a5c3a;
+    --chalk: #ffffff;
+    --board: #1a2a1a;
+    --card-bg: #faf6ee;
+    --border: #d4c9b0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 80px 40px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      45deg, transparent, transparent 40px,
+      rgba(201,168,76,0.04) 40px, rgba(201,168,76,0.04) 41px
+    );
+  }
+  .hero-inner { max-width: 900px; margin: 0 auto; position: relative; }
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 24px;
+  }
+  .hero h1 em { color: var(--gold); font-style: italic; }
+  .hero p {
+    font-size: 18px;
+    max-width: 600px;
+    color: #c8c4bb;
+    margin-bottom: 40px;
+  }
+  .toc {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+  .toc a {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    padding: 6px 14px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .toc a:hover { background: var(--gold); color: var(--ink); }
+
+  /* SECTIONS */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 70px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 4vw, 42px);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 36px 0 14px;
+    color: var(--blue);
+  }
+  p { margin-bottom: 18px; font-size: 16px; }
+
+  /* ANALOGY BOX */
+  .analogy {
+    background: var(--board);
+    color: #e8ffe8;
+    border-radius: 4px;
+    padding: 32px 36px;
+    margin: 32px 0;
+    position: relative;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .analogy::before {
+    content: '🧑‍🏫 ANALOGY';
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #7dff9b;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .analogy strong { color: #ffe17d; }
+
+  /* FORMULA BOX */
+  .formula-box {
+    background: var(--blue);
+    color: var(--chalk);
+    border-radius: 4px;
+    padding: 28px 36px;
+    margin: 28px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    line-height: 2;
+  }
+  .formula-box .label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--gold-light);
+    margin-bottom: 10px;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .formula-box .eq { color: #fff; font-size: 17px; }
+  .formula-box .comment { color: #8ab4d4; font-size: 13px; }
+
+  /* KEY INSIGHT */
+  .key-insight {
+    border-left: 4px solid var(--gold);
+    background: #fdf8ee;
+    padding: 20px 28px;
+    margin: 28px 0;
+    font-size: 16px;
+  }
+  .key-insight strong { color: var(--gold); }
+
+  /* CARDS GRID */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin: 28px 0;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 24px;
+    border-radius: 2px;
+  }
+  .card .card-icon { font-size: 28px; margin-bottom: 12px; }
+  .card h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .card p { font-size: 14px; margin: 0; }
+
+  /* === SIMULATOR 1: CARRY === */
+  .sim-box {
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 32px;
+    margin: 32px 0;
+  }
+  .sim-box h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 20px;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .slider-row label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    width: 200px;
+    flex-shrink: 0;
+  }
+  .slider-row input[type=range] {
+    flex: 1; min-width: 120px;
+    accent-color: var(--blue);
+  }
+  .slider-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    width: 60px;
+    text-align: right;
+    color: var(--blue);
+  }
+  .sim-output {
+    background: var(--board);
+    color: #e8ffe8;
+    border-radius: 4px;
+    padding: 24px 28px;
+    margin-top: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    line-height: 2.1;
+  }
+  .sim-output .pos { color: #7dff9b; }
+  .sim-output .neg { color: #ff7d7d; }
+  .sim-output .neutral { color: #ffe17d; }
+  .sim-output .big { font-size: 20px; font-weight: 600; }
+
+  /* BREAKEVEN VISUAL */
+  .breakeven-bar {
+    margin: 20px 0;
+    position: relative;
+  }
+  .bar-track {
+    height: 32px;
+    background: #e0ddd4;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: white;
+  }
+  .bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  /* YIELD CURVE CANVAS */
+  canvas {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #fff;
+    margin: 20px 0;
+  }
+
+  /* TERM STRUCTURE BUILDING BLOCKS */
+  .blocks-container {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    margin: 28px 0;
+    padding: 20px;
+    background: var(--board);
+    border-radius: 4px;
+    flex-wrap: wrap;
+  }
+  .block {
+    flex: 1;
+    min-width: 40px;
+    border-radius: 2px 2px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: white;
+    transition: all 0.4s;
+    cursor: pointer;
+    position: relative;
+  }
+  .block:hover { filter: brightness(1.2); }
+  .block .block-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 9px;
+    padding: 4px 0;
+  }
+
+  /* ROLLDOWN ANIMATION */
+  #rolldown-canvas {
+    cursor: pointer;
+  }
+
+  /* QUIZ */
+  .quiz-q {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .quiz-q .q-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+  .quiz-option {
+    background: white;
+    border: 1.5px solid var(--border);
+    padding: 12px 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    text-align: left;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .quiz-option:hover { border-color: var(--blue); background: #f0f4f8; }
+  .quiz-option.correct { border-color: var(--green); background: #e8f5ee; color: var(--green); }
+  .quiz-option.wrong { border-color: var(--red); background: #f5e8e8; color: var(--red); }
+  .quiz-explanation {
+    margin-top: 14px;
+    padding: 14px 18px;
+    background: #fff;
+    border-left: 3px solid var(--gold);
+    font-size: 14px;
+    display: none;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink);
+    color: #888;
+    text-align: center;
+    padding: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* PROGRESS BAR */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--gold);
+    z-index: 1000;
+    transition: width 0.1s;
+  }
+
+  /* NAV */
+  .sticky-nav {
+    position: sticky;
+    top: 0;
+    background: rgba(245,240,232,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 40px;
+    z-index: 100;
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+  }
+  .sticky-nav a {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-decoration: none;
+    color: #666;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+  .sticky-nav a:hover, .sticky-nav a.active { color: var(--gold); }
+
+  /* TIMELINE */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 28px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 24px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -28px;
+    top: 6px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--paper);
+  }
+  .tl-item h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--blue);
+  }
+  .tl-item p { font-size: 14px; margin: 0; }
+
+  @media (max-width: 600px) {
+    .section { padding: 50px 20px; }
+    .hero { padding: 60px 20px 40px; }
+    .sim-box { padding: 20px; }
+    .slider-row label { width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progress"></div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">BofA Research • Interactive Tutorial • Feb 2024</div>
+    <h1>Spot vs <em>Forward</em><br>Rates</h1>
+    <p>You're 5 years old. Also, you're Einstein. This tutorial bridges both — simple stories, real math, live simulations.</p>
+    <nav class="toc">
+      <a href="#s1">① What is Carry?</a>
+      <a href="#s2">② The Forward Price</a>
+      <a href="#s3">③ Live Simulator</a>
+      <a href="#s4">④ Curve Trades</a>
+      <a href="#s5">⑤ Building Blocks</a>
+      <a href="#s6">⑥ Rolldown</a>
+      <a href="#s7">⑦ Quiz</a>
+    </nav>
+  </div>
+</div>
+
+<nav class="sticky-nav" id="stickyNav">
+  <a href="#s1">Carry</a>
+  <a href="#s2">Forward Price</a>
+  <a href="#s3">Simulator</a>
+  <a href="#s4">Curve Trades</a>
+  <a href="#s5">Building Blocks</a>
+  <a href="#s6">Rolldown</a>
+  <a href="#s7">Quiz</a>
+</nav>
+
+<!-- SECTION 1: CARRY -->
+<section class="section" id="s1">
+  <div class="section-num">Section 01</div>
+  <h2>What is Carry?<br><em style="font-size:60%;color:#888">The cost of holding something</em></h2>
+
+  <div class="analogy">
+    Imagine you borrow $100 from your friend at <strong>5% interest per year</strong> and you use that money to buy a magical money-printing machine that prints <strong>4% per year</strong>. Every year, you're paying $5 in interest but only earning $4. You're <strong>losing $1 a year</strong> just to hold that machine. That loss is called <strong>negative carry</strong>.
+  </div>
+
+  <p>In the Treasury market, the same thing happens. You buy a 5-year Treasury bond that yields <strong>4.15%</strong>, but you had to borrow the money to buy it at the overnight repo rate of <strong>5.31%</strong>.</p>
+
+  <div class="formula-box">
+    <div class="label">THE CARRY FORMULA</div>
+    <div class="eq">Carry = Bond Yield − Financing Rate</div>
+    <div class="comment">// With Feb 2024 numbers:</div>
+    <div class="eq">Carry = 4.15% − 5.31% = <span style="color:#ff7d7d">−1.16%</span></div>
+    <div class="comment">// You're LOSING 1.16% per year just to hold the bond</div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">😊</div>
+      <h4>Positive Carry</h4>
+      <p>Bond yield > Financing rate. You're getting paid to hold. Like renting a house for more than your mortgage payment.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">😰</div>
+      <h4>Negative Carry</h4>
+      <p>Bond yield < Financing rate. You're bleeding money every day. Current situation in Feb 2024.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔒</div>
+      <h4>Term Financing</h4>
+      <p>Lock your financing rate for 1 year at 4.91% instead of rolling overnight. Reduces uncertainty but costs more than expected overnights.</p>
+    </div>
+  </div>
+
+  <h3>Total Return = Carry + Price Change</h3>
+  <p>Your profit or loss has exactly two parts. The carry (drip of money in or out each day) and the price change (did the bond go up or down in value?). You can write it like this:</p>
+
+  <div class="formula-box">
+    <div class="label">THE COMPLETE RETURN EQUATION</div>
+    <div class="eq">Total Return = Carry + Price Return</div>
+    <div class="comment">// Carry: known if you lock up term financing</div>
+    <div class="comment">// Price Return: UNKNOWN until the future arrives</div>
+    <div class="comment">// This is the great uncertainty every investor faces</div>
+  </div>
+
+  <div class="key-insight">
+    <strong>Einstein Moment:</strong> In physics, we split energy into kinetic and potential. In bonds, we split return into carry and price change. Both are conserved — no magic, just accounting.
+  </div>
+</section>
+
+<!-- SECTION 2: FORWARD PRICE -->
+<section class="section" id="s2">
+  <div class="section-num">Section 02</div>
+  <h2>The Forward Price:<br><em style="font-size:60%;color:#888">The breakeven that unlocks everything</em></h2>
+
+  <div class="analogy">
+    You're making a bet. You'll pay $1 now. If you win, great. If you lose, you're out $1. But what if I told you: <strong>"if you don't lose more than 22 cents, you still break even"</strong>? That 22 cents is your breakeven — and that's exactly what the forward price tells you in the bond market.
+  </div>
+
+  <p>Here's the beautiful logic. If you lock up your financing for 1 year, you know exactly what carry you'll earn (or lose). The <strong>forward price</strong> is just the price the bond would need to be at in 1 year for your total return to be exactly zero.</p>
+
+  <div class="formula-box">
+    <div class="label">SOLVING FOR ZERO TOTAL RETURN</div>
+    <div class="eq">0 = Carry + Price Return</div>
+    <div class="comment">// Rearranging:</div>
+    <div class="eq">Price Return needed = −Carry</div>
+    <div class="comment">// With negative carry (−1.16%/year), the bond must RALLY</div>
+    <div class="comment">// to offset the financing cost you're paying</div>
+    <div class="eq">Forward Yield = 3.93% &nbsp;(vs Spot 4.15%)</div>
+    <div class="comment">// Bond must rally 22bp → that's your breakeven</div>
+  </div>
+
+  <div class="analogy">
+    Think of it like a road trip. You're driving against the wind (negative carry). The "forward destination" is where you need to reach just to break even on fuel. Go further than that? You're ahead. Stop short? You lost money.
+  </div>
+
+  <h3>The Relationship Between Carry and Forward Direction</h3>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">📉</div>
+      <h4>Negative Carry → Forward Yield Lower</h4>
+      <p>Bond must rally (yield falls) to overcome carry loss. Forward yield &lt; Spot yield.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📈</div>
+      <h4>Positive Carry → Forward Yield Higher</h4>
+      <p>You're getting paid to hold, so bond can sell off a bit and you still profit. Forward yield &gt; Spot yield.</p>
+    </div>
+  </div>
+
+  <h3>Swaps: The Same Logic</h3>
+  <p>In interest rate swaps, you receive a fixed rate and pay floating (SOFR). This is identical to a financed Treasury position. The <strong>1y4y swap rate</strong> is the swap equivalent of the 1-year forward on the 5-year Treasury — it's the 4-year rate, starting 1 year from now.</p>
+
+  <div class="formula-box">
+    <div class="label">SWAP ANALOGY</div>
+    <div class="eq">Long 5y Treasury (financed) ≡ Receive 5y Swap Fixed</div>
+    <div class="eq">1y Forward on 5y Tsy ≡ 1y4y Swap Rate</div>
+    <div class="comment">// Same math, different wrapper</div>
+  </div>
+</section>
+
+<!-- SECTION 3: LIVE SIMULATOR -->
+<section class="section" id="s3">
+  <div class="section-num">Section 03</div>
+  <h2>Live Simulator:<br><em style="font-size:60%;color:#888">Move the sliders. Feel the math.</em></h2>
+
+  <p>Adjust the bond yield, financing rate, and horizon yield. Watch how carry, forward price, and total return react in real time. This is the Feb 2024 BofA example, made interactive.</p>
+
+  <div class="sim-box">
+    <h4>⚡ Interactive Carry & Forward Calculator</h4>
+
+    <div class="slider-row">
+      <label>5y Bond Yield</label>
+      <input type="range" id="bondYield" min="2" max="7" step="0.05" value="4.15">
+      <span class="slider-val" id="bondYieldVal">4.15%</span>
+    </div>
+    <div class="slider-row">
+      <label>1y Financing Rate (SOFR)</label>
+      <input type="range" id="finRate" min="2" max="7" step="0.05" value="4.91">
+      <span class="slider-val" id="finRateVal">4.91%</span>
+    </div>
+    <div class="slider-row">
+      <label>Modified Duration (years)</label>
+      <input type="range" id="duration" min="1" max="10" step="0.1" value="4.5">
+      <span class="slider-val" id="durationVal">4.5y</span>
+    </div>
+    <div class="slider-row">
+      <label>Horizon Yield (your bet)</label>
+      <input type="range" id="horizonYield" min="2" max="7" step="0.05" value="3.93">
+      <span class="slider-val" id="horizonYieldVal">3.93%</span>
+    </div>
+
+    <div class="breakeven-bar">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#888;margin-bottom:6px;">BREAKEVEN HURDLE vs 1σ VOLATILITY (65bp)</div>
+      <div class="bar-track">
+        <div class="bar-fill" id="hurdleBar" style="background:var(--blue);width:33%;">
+          <span id="hurdleText">22bp / 65bp</span>
+        </div>
+      </div>
+      <div class="bar-labels"><span>0bp hurdle</span><span>65bp (1σ move)</span></div>
+    </div>
+
+    <div class="sim-output" id="simOutput">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- Yield Curve Canvas -->
+  <h3>Yield Curve: Spot vs Forward</h3>
+  <p>Below is an illustrative yield curve showing spot yields and where 1-year forward yields land. Click anywhere on the canvas to see a forward calculation at that maturity.</p>
+  <canvas id="curveCanvas" height="280"></canvas>
+  <p style="font-size:12px;color:#888;font-family:'IBM Plex Mono',monospace;">↑ Click on the curve to explore forward yields at different maturities</p>
+</section>
+
+<!-- SECTION 4: CURVE TRADES -->
+<section class="section" id="s4">
+  <div class="section-num">Section 04</div>
+  <h2>Curve Trades:<br><em style="font-size:60%;color:#888">When you bet on the shape, not just the level</em></h2>
+
+  <div class="analogy">
+    Imagine two thermometers — one for New York (5y) and one for Miami (30y). Instead of betting on whether it gets hotter or colder, you're betting on the <strong>temperature difference</strong> between the two cities. That's a curve trade: you go long one bond and short another, and you only care about the <strong>spread between them</strong>.
+  </div>
+
+  <h3>The 5-30 Steepener Example</h3>
+  <p>From the BofA data (Feb 9, 2024):</p>
+
+  <div class="formula-box">
+    <div class="label">STEEPENER TRADE MATH</div>
+    <div class="eq">Buy 5y (yield 4.15%) + Sell Short 30y (yield 4.38%)</div>
+    <div class="comment">─────────────────────────────────────</div>
+    <div class="eq">5y breakeven: must rally &gt; 22bp to profit</div>
+    <div class="eq">30y breakeven: must NOT rally &gt; 3bp to profit</div>
+    <div class="comment">─────────────────────────────────────</div>
+    <div class="eq">Net: 5-30 slope must steepen ≥ 19bp</div>
+    <div class="comment">// Spot slope: 23bp → Forward slope: 42bp</div>
+    <div class="comment">// The forward is already pricing 19bp of steepening!</div>
+  </div>
+
+  <div class="key-insight">
+    <strong>Key Insight:</strong> The 5-30 steepener is a <strong>negative carry trade</strong>. The market's forward price already assumes 19bp of steepening. You only profit if it steepens <em>more</em> than that.
+  </div>
+
+  <h3>Interactive: 5-30 Steepener Simulator</h3>
+  <div class="sim-box">
+    <h4>⚡ Curve Trade P&L Calculator</h4>
+    <div class="slider-row">
+      <label>5y Spot Yield</label>
+      <input type="range" id="y5" min="2" max="7" step="0.05" value="4.15">
+      <span class="slider-val" id="y5v">4.15%</span>
+    </div>
+    <div class="slider-row">
+      <label>30y Spot Yield</label>
+      <input type="range" id="y30" min="2" max="7" step="0.05" value="4.38">
+      <span class="slider-val" id="y30v">4.38%</span>
+    </div>
+    <div class="slider-row">
+      <label>1y Financing Rate</label>
+      <input type="range" id="finRate2" min="2" max="7" step="0.05" value="4.91">
+      <span class="slider-val" id="finRate2v">4.91%</span>
+    </div>
+    <div class="slider-row">
+      <label>Actual 5-30 Slope in 1y</label>
+      <input type="range" id="futureSlope" min="-20" max="120" step="1" value="42">
+      <span class="slider-val" id="futureSlopev">42bp</span>
+    </div>
+    <div class="sim-output" id="curveOut"></div>
+  </div>
+
+  <h3>Duration Weighting: Why it Matters</h3>
+  <p>A 30y bond moves much more in price for every 1bp change in yield than a 5y bond. If you buy $1M of 5y and short $1M of 30y, you have <em>way</em> more risk from the 30y side. Duration weighting means adjusting the notionals so that a 1bp move affects both sides equally — then only the <em>spread</em> of yield changes matters, not each individually.</p>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <h4>Non-Duration-Weighted</h4>
+      <p>P&L depends on 5y yield AND 30y yield separately. Messy and hard to analyze.</p>
+    </div>
+    <div class="tl-item">
+      <h4>Duration-Weighted</h4>
+      <p>P&L depends ONLY on the yield difference (spread). Clean and focused.</p>
+    </div>
+    <div class="tl-item">
+      <h4>The BofA Example</h4>
+      <p>5-30 duration-weighted steepener needs 19bp of steepening to break even. Simple and elegant.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: BUILDING BLOCKS -->
+<section class="section" id="s5">
+  <div class="section-num">Section 05</div>
+  <h2>Forwards as Building Blocks:<br><em style="font-size:60%;color:#888">The 10y rate is 9 forwards stacked up</em></h2>
+
+  <div class="analogy">
+    Think of a 10-year interest rate as a <strong>tower of LEGO bricks</strong>. Each brick is a 1-year forward rate. The tower's height is the 10y rate. If you want to change just one brick in the middle without touching the top, you use a forward instrument. With a spot trade, you're moving the whole tower.
+  </div>
+
+  <p>No-arbitrage logic means the 10y rate must equal the compounded chain of shorter forwards:</p>
+
+  <div class="formula-box">
+    <div class="label">NO-ARBITRAGE COMPOUNDING</div>
+    <div class="eq">(1 + r_10y)^10 = (1+r_1y) × (1+f_1y1y) × ... × (1+f_9y1y)</div>
+    <div class="comment">// Where f_Xy1y = 1-year rate, X years forward</div>
+    <div class="comment">// If this breaks → arbitrage → traders push it back</div>
+  </div>
+
+  <h3>Click the Blocks to See the Decomposition</h3>
+  <p>The tower below shows how the 10y spot rate decomposes into 1-year forward rates. Each block is one forward. Click to highlight.</p>
+
+  <div class="blocks-container" id="blocksContainer"></div>
+  <div id="blockInfo" style="font-family:'IBM Plex Mono',monospace;font-size:13px;padding:16px;background:#f0ece4;border:1px solid var(--border);border-radius:4px;margin-top:8px;min-height:60px;">
+    ← Click a block to learn about that forward rate
+  </div>
+
+  <h3>Why Trade the 5y5y Instead of the 10y?</h3>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🎯</div>
+      <h4>10y Spot Rate</h4>
+      <p>You're implicitly trading BOTH near-term Fed cut timing AND long-run terminal rate. Two views bundled into one.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔬</div>
+      <h4>5y5y Forward</h4>
+      <p>You're expressing a pure view on the terminal Fed rate (where cuts stop). Near-term Fed timing has minimal effect.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚗️</div>
+      <h4>Einstein Principle</h4>
+      <p>Forwards let you isolate variables, like a controlled experiment. The spot rate is a confounded experiment.</p>
+    </div>
+  </div>
+
+  <div class="key-insight">
+    <strong>Deep Insight:</strong> Whether forward overnight rates represent true Fed expectations or include a "term premium" doesn't change the math. The compounding relationship holds regardless. Term premium is a separate layer of interpretation.
+  </div>
+</section>
+
+<!-- SECTION 6: ROLLDOWN -->
+<section class="section" id="s6">
+  <div class="section-num">Section 06</div>
+  <h2>Rolldown:<br><em style="font-size:60%;color:#888">Time travel for your bond</em></h2>
+
+  <div class="analogy">
+    Imagine you buy a bottle of wine that will be worth more as it gets older. <strong>Rolldown</strong> is when you buy a 3-year bond, and one year later it has "aged" into a 2-year bond — and if the yield curve hasn't moved, that 2-year bond yields less (prices more) than the 3-year did. You made money just by waiting. The curve did the work for you.
+  </div>
+
+  <p>Rolldown assumes the yield curve stays exactly the same. If the 2y yields 4.6% and 3y yields 4.4% today, rolldown says: next year, the 2y will still yield 4.6%. Your 3y bond (now a 2y) will have appreciated in price because it moved from 4.4% to 4.6%... wait, that's a loss!</p>
+
+  <div class="formula-box">
+    <div class="label">ROLLDOWN FORMULAS FOR A 5Y NOTE</div>
+    <div class="eq">1y Rolldown          = 5y spot − 4y spot</div>
+    <div class="eq">1y Carry Breakeven   = 5y spot − 1y4y forward</div>
+    <div class="eq">1y Carry + Rolldown  = 4y spot − 1y4y forward</div>
+    <div class="comment">// Rolldown is best when the curve is steep (big 5y-4y spread)</div>
+    <div class="comment">// And when the Fed is firmly on hold (curve stable)</div>
+  </div>
+
+  <h3>Animated Rolldown: Watch the Bond Age</h3>
+  <canvas id="rolldown-canvas" height="280"></canvas>
+  <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+    <button onclick="startRolldown()" style="background:var(--blue);color:white;border:none;padding:12px 24px;font-family:'IBM Plex Mono',monospace;font-size:13px;cursor:pointer;border-radius:3px;">▶ Animate Rolldown</button>
+    <button onclick="resetRolldown()" style="background:var(--paper);color:var(--ink);border:1.5px solid var(--border);padding:12px 24px;font-family:'IBM Plex Mono',monospace;font-size:13px;cursor:pointer;border-radius:3px;">↺ Reset</button>
+  </div>
+  <div id="rolldownInfo" style="font-family:'IBM Plex Mono',monospace;font-size:13px;padding:16px;background:#f0ece4;border:1px solid var(--border);border-radius:4px;margin-top:12px;">
+    Press ▶ to see how your bond "ages" along the yield curve
+  </div>
+
+  <div class="key-insight">
+    <strong>When does rolldown matter most?</strong> When the Fed is firmly on hold — the curve is stable and steep. When the Fed is actively cutting or hiking, forward rates move around so much that rolldown becomes a minor consideration. In Feb 2024, with active Fed expectations, rolldown was a smaller factor.
+  </div>
+</section>
+
+<!-- SECTION 7: QUIZ -->
+<section class="section" id="s7">
+  <div class="section-num">Section 07</div>
+  <h2>Test Yourself:<br><em style="font-size:60%;color:#888">Are you Einstein yet?</em></h2>
+
+  <div class="quiz-q" id="q1">
+    <div class="q-text">① The 5y Treasury yields 4.15% and the 1y financing rate is 4.91%. An investor goes long the 5y. What is the carry?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="answer(this,'q1',false)">+0.76% (positive carry)</button>
+      <button class="quiz-option" onclick="answer(this,'q1',true)">−0.76% (negative carry)</button>
+      <button class="quiz-option" onclick="answer(this,'q1',false)">0% (neutral carry)</button>
+      <button class="quiz-option" onclick="answer(this,'q1',false)">−1.16% (overnight carry)</button>
+    </div>
+    <div class="quiz-explanation" id="q1-exp">
+      Carry = Bond Yield − Financing Rate = 4.15% − 4.91% = <strong>−0.76%</strong>. You're paying 4.91% to borrow money that earns only 4.15%. The −1.16% answer would apply if using the overnight SOFR rate of 5.31% instead of the 1y term rate.
+    </div>
+  </div>
+
+  <div class="quiz-q" id="q2">
+    <div class="q-text">② If carry is negative, the 1-year forward yield of the bond will be _____ than the spot yield.</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="answer(this,'q2',true)">Lower (bond must rally to break even)</button>
+      <button class="quiz-option" onclick="answer(this,'q2',false)">Higher (bond must sell off to break even)</button>
+      <button class="quiz-option" onclick="answer(this,'q2',false)">Equal (carry doesn't affect forwards)</button>
+    </div>
+    <div class="quiz-explanation" id="q2-exp">
+      With negative carry, you're losing money every day you hold. For the total return to be zero, the bond must appreciate in price — which means the yield must <strong>fall</strong>. So the forward yield is lower than spot. The bond "needs to rally" to overcome the carry loss.
+    </div>
+  </div>
+
+  <div class="quiz-q" id="q3">
+    <div class="q-text">③ An investor thinks the Fed will cut rates faster than the market expects (term financing rate is too high). They have a long 5y position. What should they prefer?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="answer(this,'q3',false)">Lock in 1y term financing (do the forward trade)</button>
+      <button class="quiz-option" onclick="answer(this,'q3',true)">Roll financing overnight (do the spot trade)</button>
+      <button class="quiz-option" onclick="answer(this,'q3',false)">It doesn't matter either way</button>
+    </div>
+    <div class="quiz-explanation" id="q3-exp">
+      If you think the Fed cuts faster than priced, overnight rates will fall faster than the market implies. By rolling overnight financing, you'll pay a <strong>lower actual financing cost</strong> than the locked-in 1y term rate of 4.91%. The spot trade is better when you think term financing is overpriced.
+    </div>
+  </div>
+
+  <div class="quiz-q" id="q4">
+    <div class="q-text">④ The 5-30 spot slope is 23bp. The 1y forward 5-30 slope is 42bp. A duration-weighted 5-30 steepener needs to steepen how much to break even?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="answer(this,'q4',false)">42bp</button>
+      <button class="quiz-option" onclick="answer(this,'q4',false)">23bp</button>
+      <button class="quiz-option" onclick="answer(this,'q4',true)">19bp (42 − 23)</button>
+      <button class="quiz-option" onclick="answer(this,'q4',false)">65bp</button>
+    </div>
+    <div class="quiz-explanation" id="q4-exp">
+      The forward already prices in 42bp of slope, vs the current 23bp. So the market is already expecting 19bp of steepening over 1 year. Your steepener trade only profits if steepening exceeds that 19bp threshold. The breakeven is the forward slope minus the spot slope: 42 − 23 = <strong>19bp</strong>.
+    </div>
+  </div>
+
+  <div class="quiz-q" id="q5">
+    <div class="q-text">⑤ Why might a trader prefer to trade the 5y5y swap forward instead of the 10y spot rate?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="answer(this,'q5',false)">The 5y5y always has better liquidity</button>
+      <button class="quiz-option" onclick="answer(this,'q5',true)">To isolate a view on the terminal Fed rate without exposure to near-term Fed cut timing</button>
+      <button class="quiz-option" onclick="answer(this,'q5',false)">Forwards have no convexity, making them safer</button>
+      <button class="quiz-option" onclick="answer(this,'q5',false)">To avoid paying carry on the position</button>
+    </div>
+    <div class="quiz-explanation" id="q5-exp">
+      The 10y spot rate is a blend of the 5y spot rate (sensitive to near-term Fed cut timing) and the 5y5y forward (sensitive to the terminal/long-run Fed rate). If you only have a view on the terminal rate, trading the 10y spot forces you to take on unwanted exposure to near-term Fed timing. The 5y5y isolates that specific view cleanly.
+    </div>
+  </div>
+
+  <div id="quizScore" style="display:none;margin-top:30px;padding:28px;background:var(--board);color:var(--paper);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:16px;text-align:center;"></div>
+</section>
+
+<footer>
+  Based on BofA Global Research: "US Rates Watch — Rates basics: spot vs forward" • Feb 15 2024 • Ralph Axel<br>
+  <span style="color:#555">Interactive tutorial for educational purposes only. Not investment advice.</span>
+</footer>
+
+<script>
+// ===== PROGRESS BAR =====
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  document.getElementById('progress').style.width = (p*100) + '%';
+});
+
+// ===== SIMULATOR 1: CARRY =====
+function updateSim() {
+  const by = parseFloat(document.getElementById('bondYield').value);
+  const fr = parseFloat(document.getElementById('finRate').value);
+  const dur = parseFloat(document.getElementById('duration').value);
+  const hy = parseFloat(document.getElementById('horizonYield').value);
+
+  document.getElementById('bondYieldVal').textContent = by.toFixed(2)+'%';
+  document.getElementById('finRateVal').textContent = fr.toFixed(2)+'%';
+  document.getElementById('durationVal').textContent = dur.toFixed(1)+'y';
+  document.getElementById('horizonYieldVal').textContent = hy.toFixed(2)+'%';
+
+  const carry = by - fr; // per year
+  const breakeven_bp = Math.abs(carry) * 100; // bp needed to overcome carry
+  const fwdYield = by - carry; // = by - (by-fr) = fr (simplified)
+  // More precise: forward yield = by - carry (in % terms, scaled by duration)
+  const fwdYieldApprox = by + carry; // negative carry → fwd yield lower
+  const priceReturn = -(hy - by) * dur * 100; // in basis points approx
+  const totalReturn = carry + priceReturn/100;
+
+  // Hurdle bar
+  const sigma = 65; // 1σ = 65bp for 5y
+  const hurdlePct = Math.min((breakeven_bp / sigma) * 100, 100);
+  document.getElementById('hurdleBar').style.width = hurdlePct + '%';
+  document.getElementById('hurdleBar').style.background = hurdlePct > 60 ? '#b5341a' : hurdlePct > 30 ? '#c9a84c' : '#1a5c3a';
+  document.getElementById('hurdleText').textContent = breakeven_bp.toFixed(0) + 'bp / ' + sigma + 'bp';
+
+  const carryClass = carry >= 0 ? 'pos' : 'neg';
+  const trClass = totalReturn >= 0 ? 'pos' : 'neg';
+  const fwdDir = carry < 0 ? '↓ (bond must RALLY)' : '↑ (bond can sell off)';
+
+  document.getElementById('simOutput').innerHTML = `
+<span class="${carryClass}">Carry:          ${carry >= 0 ? '+' : ''}${(carry*100).toFixed(2)} bp/yr   ${carry >= 0 ? '✓ POSITIVE' : '✗ NEGATIVE'}</span>
+<span class="neutral">Forward Yield:  ${fwdYieldApprox.toFixed(2)}%   ${fwdDir}</span>
+<span class="neutral">Breakeven Move: ${breakeven_bp.toFixed(1)} bp  (${(breakeven_bp/sigma*100).toFixed(0)}% of 1σ volatility)</span>
+<span class="neutral">Your Horizon Yield: ${hy.toFixed(2)}%</span>
+<span class="${trClass} big">Total Return:   ${totalReturn >= 0 ? '+' : ''}${(totalReturn*100).toFixed(2)} bp   ${totalReturn >= 0 ? '✅ PROFIT' : '❌ LOSS'}</span>`;
+}
+
+['bondYield','finRate','duration','horizonYield'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateSim);
+});
+updateSim();
+
+// ===== YIELD CURVE CANVAS =====
+const cc = document.getElementById('curveCanvas');
+const ctx = cc.getContext('2d');
+
+const spotCurve = [
+  {t:1, y:5.10}, {t:2,y:4.80},{t:3,y:4.55},{t:4,y:4.35},
+  {t:5,y:4.15},{t:7,y:4.20},{t:10,y:4.25},{t:20,y:4.30},{t:30,y:4.38}
+];
+const fwdCurve = [
+  {t:1,y:4.60},{t:2,y:4.20},{t:3,y:4.00},{t:4,y:3.96},
+  {t:5,y:3.93},{t:7,y:4.00},{t:10,y:4.10},{t:20,y:4.20},{t:30,y:4.35}
+];
+
+function drawCurve(highlight) {
+  const W = cc.offsetWidth * window.devicePixelRatio || cc.offsetWidth;
+  const H = 280;
+  cc.width = W; cc.height = H;
+  const s = window.devicePixelRatio || 1;
+  ctx.scale(s,s);
+  const w = cc.offsetWidth, h = H;
+
+  const pad = {l:50,r:20,t:20,b:40};
+  const minY = 3.5, maxY = 5.5;
+  const maxT = 30;
+
+  function px(t) { return pad.l + (t/maxT)*(w-pad.l-pad.r); }
+  function py(y) { return pad.t + (1-(y-minY)/(maxY-minY))*(h-pad.t-pad.b); }
+
+  // Grid
+  ctx.strokeStyle = '#e0ddd4'; ctx.lineWidth = 1;
+  [3.5,4.0,4.5,5.0,5.5].forEach(yv => {
+    ctx.beginPath();
+    ctx.moveTo(pad.l, py(yv)); ctx.lineTo(w-pad.r, py(yv));
+    ctx.stroke();
+    ctx.fillStyle='#aaa'; ctx.font='11px IBM Plex Mono';
+    ctx.fillText(yv.toFixed(1)+'%', 4, py(yv)+4);
+  });
+  [1,2,5,10,20,30].forEach(tv => {
+    ctx.fillStyle='#aaa'; ctx.font='11px IBM Plex Mono';
+    ctx.fillText(tv+'y', px(tv)-8, h-8);
+  });
+
+  // Draw spot curve
+  ctx.beginPath(); ctx.strokeStyle = '#1a3a5c'; ctx.lineWidth = 2.5;
+  spotCurve.forEach((p,i) => {
+    i===0 ? ctx.moveTo(px(p.t),py(p.y)) : ctx.lineTo(px(p.t),py(p.y));
+  });
+  ctx.stroke();
+
+  // Draw fwd curve
+  ctx.beginPath(); ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = 2.5; ctx.setLineDash([6,4]);
+  fwdCurve.forEach((p,i) => {
+    i===0 ? ctx.moveTo(px(p.t),py(p.y)) : ctx.lineTo(px(p.t),py(p.y));
+  });
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Dots
+  spotCurve.forEach(p => {
+    ctx.beginPath(); ctx.arc(px(p.t),py(p.y),4,0,Math.PI*2);
+    ctx.fillStyle='#1a3a5c'; ctx.fill();
+  });
+  fwdCurve.forEach(p => {
+    ctx.beginPath(); ctx.arc(px(p.t),py(p.y),4,0,Math.PI*2);
+    ctx.fillStyle='#c9a84c'; ctx.fill();
+  });
+
+  // Highlight
+  if (highlight) {
+    ctx.beginPath(); ctx.arc(highlight.x, highlight.y, 8, 0, Math.PI*2);
+    ctx.strokeStyle='#b5341a'; ctx.lineWidth=2; ctx.stroke();
+  }
+
+  // Legend
+  ctx.fillStyle='#1a3a5c'; ctx.font='bold 12px IBM Plex Sans';
+  ctx.fillText('── Spot Yield', w-200, 34);
+  ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(w-200,42); ctx.lineTo(w-160,42);
+  ctx.strokeStyle='#c9a84c'; ctx.lineWidth=2; ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#c9a84c';
+  ctx.fillText('- - 1y Forward Yield', w-155, 46);
+}
+
+cc.addEventListener('click', e => {
+  const rect = cc.getBoundingClientRect();
+  const xClick = e.clientX - rect.left;
+  const maturity = ((xClick - 50) / (cc.offsetWidth - 70)) * 30;
+  if (maturity < 0 || maturity > 30) return;
+
+  // Interpolate
+  function interp(curve, t) {
+    for (let i=0; i<curve.length-1; i++) {
+      if (t >= curve[i].t && t <= curve[i+1].t) {
+        const f = (t - curve[i].t)/(curve[i+1].t - curve[i].t);
+        return curve[i].y + f*(curve[i+1].y - curve[i].y);
+      }
+    }
+    return curve[curve.length-1].y;
+  }
+  const sy = interp(spotCurve, maturity);
+  const fy = interp(fwdCurve, maturity);
+  drawCurve({x: xClick, y: (1-(sy-3.5)/2)*(280-60)+20});
+  alert(`At ${maturity.toFixed(1)}y maturity:\nSpot yield: ${sy.toFixed(2)}%\n1y Forward yield: ${fy.toFixed(2)}%\nDifference: ${((fy-sy)*100).toFixed(1)}bp`);
+});
+
+drawCurve();
+window.addEventListener('resize', () => drawCurve());
+
+// ===== CURVE TRADE SIMULATOR =====
+function updateCurveSim() {
+  const y5 = parseFloat(document.getElementById('y5').value);
+  const y30 = parseFloat(document.getElementById('y30').value);
+  const fr2 = parseFloat(document.getElementById('finRate2').value);
+  const fs = parseFloat(document.getElementById('futureSlope').value);
+
+  document.getElementById('y5v').textContent = y5.toFixed(2)+'%';
+  document.getElementById('y30v').textContent = y30.toFixed(2)+'%';
+  document.getElementById('finRate2v').textContent = fr2.toFixed(2)+'%';
+  document.getElementById('futureSlopev').textContent = (fs >= 0 ? '+' : '') + fs + 'bp';
+
+  const spotSlope = (y30 - y5)*100;
+  const carry5 = y5 - fr2;
+  const carry30 = y30 - fr2;
+  const be5 = -carry5 * 100;
+  const be30 = -carry30 * 100;
+  const fwdSlope = spotSlope + (be30 - be5);
+  const needed = fwdSlope - spotSlope;
+  const pnl = fs - needed;
+  const pnlClass = pnl >= 0 ? 'pos' : 'neg';
+
+  document.getElementById('curveOut').innerHTML = `
+<span class="neutral">5-30 Spot Slope:     ${spotSlope.toFixed(1)} bp</span>
+<span class="neutral">5y Carry:            ${(carry5*100).toFixed(1)} bp/yr</span>
+<span class="neutral">30y Carry:           ${(carry30*100).toFixed(1)} bp/yr</span>
+<span class="neutral">5-30 Fwd Slope:      ${fwdSlope.toFixed(1)} bp (1y out)</span>
+<span class="neutral">Breakeven Steepen:   ${needed.toFixed(1)} bp needed</span>
+<span class="neutral">Your Slope in 1y:    ${(fs >= 0 ? '+' : '') + fs} bp</span>
+<span class="${pnlClass} big">P&L Signal:         ${pnl >= 0 ? '✅ PROFIT' : '❌ LOSS'}  (${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)} bp beyond breakeven)</span>`;
+}
+
+['y5','y30','finRate2','futureSlope'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateCurveSim);
+});
+updateCurveSim();
+
+// ===== BUILDING BLOCKS =====
+const blockData = [
+  {label:'1y', name:'1y Spot', desc:'Today\'s 1-year rate. The overnight Fed rate compounded for 1 year. Currently ~5.1% in early 2024.', color:'#b5341a'},
+  {label:'1y1y', name:'1y Forward', desc:'The 1-year rate, starting 1 year from now. Heavily influenced by Fed cut expectations for year 2.', color:'#c9601a'},
+  {label:'2y1y', name:'2y Forward', desc:'The 1-year rate, starting in 2 years. Reflects expected Fed policy in years 2-3. The "plateau" region.', color:'#c9a84c'},
+  {label:'3y1y', name:'3y Forward', desc:'Starting in 3 years. Markets begin to think more about terminal rates here.', color:'#8a9a1a'},
+  {label:'4y1y', name:'4y Forward', desc:'Starting in 4 years. Terminal rate views increasingly dominate over near-term Fed path.', color:'#1a5c3a'},
+  {label:'5y1y', name:'5y Forward', desc:'Starting in 5 years. Highly related to the 5y5y. Very little near-term Fed timing exposure.', color:'#1a3a5c'},
+  {label:'6y1y', name:'6y Forward', desc:'Starting in 6 years. Long-run neutral rate / r* debates dominate at this horizon.', color:'#2a1a5c'},
+  {label:'7y1y', name:'7y Forward', desc:'Starting in 7 years. Inflation expectations and long-run Fed credibility are key drivers.', color:'#5c1a5c'},
+  {label:'8y1y', name:'8y Forward', desc:'Starting in 8 years. Term premium looms large here — uncertainty premium for holding long bonds.', color:'#7a1a3a'},
+  {label:'9y1y', name:'9y Forward', desc:'Starting in 9 years. The last building block of the 10y rate. Heavily term-premium driven.', color:'#8a1a1a'},
+];
+
+const heights = [200,170,145,130,120,115,115,118,122,128];
+const bc = document.getElementById('blocksContainer');
+blockData.forEach((b, i) => {
+  const el = document.createElement('div');
+  el.className = 'block';
+  el.style.cssText = `height:${heights[i]}px;background:${b.color};`;
+  el.innerHTML = `<span class="block-label">${b.label}</span>`;
+  el.onclick = () => {
+    document.getElementById('blockInfo').innerHTML =
+      `<strong style="color:${b.color}">${b.name}</strong><br>${b.desc}`;
+    document.querySelectorAll('.block').forEach(x => x.style.opacity='0.5');
+    el.style.opacity='1';
+    el.style.filter='brightness(1.3)';
+  };
+  bc.appendChild(el);
+});
+
+// ===== ROLLDOWN ANIMATION =====
+const rc = document.getElementById('rolldown-canvas');
+const rctx = rc.getContext('2d');
+let rdAnim = null;
+let rdT = 0;
+
+function drawRolldown(progress) {
+  const W = rc.offsetWidth * (window.devicePixelRatio||1);
+  const H = 280;
+  rc.width = W; rc.height = H;
+  const s = window.devicePixelRatio||1;
+  rctx.scale(s,s);
+  const w = rc.offsetWidth, h = H;
+
+  const pad = {l:55,r:20,t:20,b:40};
+  const minY = 3.8, maxY = 5.2, maxT = 5;
+
+  function px(t) { return pad.l + (t/maxT)*(w-pad.l-pad.r); }
+  function py(y) { return pad.t + (1-(y-minY)/(maxY-minY))*(h-pad.t-pad.b); }
+
+  // Yield curve: downward sloping front end
+  const curve = t => 5.2 - t*0.2 + t*t*0.012;
+
+  // Grid
+  rctx.strokeStyle = '#e0ddd4'; rctx.lineWidth = 1;
+  [4.0,4.5,5.0].forEach(yv => {
+    rctx.beginPath();
+    rctx.moveTo(pad.l, py(yv)); rctx.lineTo(w-pad.r, py(yv));
+    rctx.stroke();
+    rctx.fillStyle='#aaa'; rctx.font='11px IBM Plex Mono';
+    rctx.fillText(yv.toFixed(1)+'%', 4, py(yv)+4);
+  });
+  [1,2,3,4,5].forEach(tv => {
+    rctx.fillStyle='#aaa'; rctx.font='11px IBM Plex Mono';
+    rctx.fillText(tv+'y', px(tv)-8, h-8);
+  });
+
+  // Draw curve
+  rctx.beginPath(); rctx.strokeStyle='#1a3a5c'; rctx.lineWidth=2.5;
+  for (let t=0; t<=5; t+=0.05) {
+    const x=px(t), y=py(curve(t));
+    t===0 ? rctx.moveTo(x,y) : rctx.lineTo(x,y);
+  }
+  rctx.stroke();
+
+  // Bond position: starts at t=3 (3y), rolls to t=2 (2y) over time
+  const startT = 3;
+  const currentT = startT - progress;
+  const startY = curve(startT);
+  const currentY = curve(currentT);
+
+  // Draw arrow showing movement
+  if (progress > 0) {
+    rctx.beginPath();
+    rctx.strokeStyle = '#c9a84c'; rctx.lineWidth=2; rctx.setLineDash([4,4]);
+    rctx.moveTo(px(startT), py(startY));
+    rctx.lineTo(px(currentT), py(currentY));
+    rctx.stroke(); rctx.setLineDash([]);
+  }
+
+  // Start dot
+  rctx.beginPath(); rctx.arc(px(startT), py(startY), 6, 0, Math.PI*2);
+  rctx.fillStyle = progress > 0 ? '#aaa' : '#1a3a5c'; rctx.fill();
+  rctx.fillStyle='#555'; rctx.font='11px IBM Plex Mono';
+  rctx.fillText(`Buy 3y @ ${startY.toFixed(2)}%`, px(startT)+10, py(startY)-8);
+
+  // Moving dot
+  rctx.beginPath(); rctx.arc(px(currentT), py(currentY), 8, 0, Math.PI*2);
+  rctx.fillStyle = '#c9a84c'; rctx.fill();
+  rctx.fillStyle='#000'; rctx.font='bold 12px IBM Plex Mono';
+  rctx.fillText(`Now ${currentT.toFixed(1)}y @ ${currentY.toFixed(2)}%`, px(currentT)-80, py(currentY)-14);
+
+  // Gain label
+  const priceDiff = (currentY - startY) * (-7) * 100; // approx: -dur * Δy * 100 = bps
+  if (progress > 0.05) {
+    rctx.fillStyle = priceDiff >= 0 ? '#1a5c3a' : '#b5341a';
+    rctx.font='bold 13px IBM Plex Mono';
+    rctx.fillText(`Price Δ: ${priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(0)}bp`, px(2), py(5.1));
+  }
+
+  document.getElementById('rolldownInfo').innerHTML =
+    progress < 0.01 ? 'Bond just purchased: 3y at ' + startY.toFixed(2) + '%' :
+    `After ${(progress*12).toFixed(0)} months: bond is now a ${currentT.toFixed(1)}y note.<br>` +
+    `Yield moved from ${startY.toFixed(2)}% → ${currentY.toFixed(2)}% (curve unchanged).<br>` +
+    `Rolldown gain: ~${Math.abs(priceDiff).toFixed(0)}bp of price appreciation (yield fell as maturity shortened).`;
+}
+
+function startRolldown() {
+  if (rdAnim) cancelAnimationFrame(rdAnim);
+  rdT = 0;
+  function step() {
+    rdT += 0.008;
+    drawRolldown(Math.min(rdT, 1));
+    if (rdT < 1) rdAnim = requestAnimationFrame(step);
+  }
+  step();
+}
+function resetRolldown() {
+  if (rdAnim) cancelAnimationFrame(rdAnim);
+  rdT = 0;
+  drawRolldown(0);
+  document.getElementById('rolldownInfo').textContent = 'Press ▶ to see how your bond "ages" along the yield curve';
+}
+
+drawRolldown(0);
+window.addEventListener('resize', () => drawRolldown(rdT||0));
+
+// ===== QUIZ =====
+let answers = {};
+function answer(btn, qid, correct) {
+  const q = document.getElementById(qid);
+  if (q.dataset.answered) return;
+  q.dataset.answered = '1';
+  answers[qid] = correct;
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  const exp = document.getElementById(qid+'-exp');
+  if (exp) exp.style.display = 'block';
+
+  if (Object.keys(answers).length === 5) {
+    const score = Object.values(answers).filter(Boolean).length;
+    const box = document.getElementById('quizScore');
+    box.style.display = 'block';
+    box.innerHTML = `Score: ${score}/5<br><br>${
+      score===5 ? '🏆 Einstein achieved. You understand carry, forwards, curve trades, building blocks AND rolldown.' :
+      score>=3 ? '📚 Solid grasp. Review the sections for your wrong answers.' :
+      '🔄 Re-read the tutorial — the math is elegant once it clicks!'
+    }`;
+  }
+}
+</script>
+</body>
+</html>
