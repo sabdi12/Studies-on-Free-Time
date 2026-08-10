@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Exotics Desk — An Interactive Field Guide to FX Derivatives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{
+  --bg:#0a0e14;
+  --bg-alt:#0d1219;
+  --panel:#111823;
+  --panel2:#141d2a;
+  --border:#1f2b3a;
+  --border-soft:#182231;
+  --text:#e7edf5;
+  --text-dim:#93a2b6;
+  --text-faint:#5c6b80;
+  --amber:#f0a339;
+  --amber-dim:#7a5a26;
+  --teal:#3fd6c4;
+  --teal-dim:#1c5a54;
+  --rose:#ef6b6b;
+  --rose-dim:#6a2c2c;
+  --violet:#a58bf0;
+  --violet-dim:#453a6e;
+  --grid:#1a2432;
+  --radius:10px;
+  --mono:'IBM Plex Mono', monospace;
+  --display:'Space Grotesk', sans-serif;
+  --body:'Inter', sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--body); line-height:1.65; font-size:16px;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--amber); color:#0a0e14;}
+a{color:var(--amber);}
+h1,h2,h3,h4{font-family:var(--display); font-weight:600; letter-spacing:-0.01em; color:#fff; margin:0 0 .5em;}
+p{color:var(--text-dim); margin:0 0 1em;}
+.mono{font-family:var(--mono);}
+.num{font-family:var(--mono); color:var(--amber); font-variant-numeric:tabular-nums;}
+
+/* ---------- layout shell ---------- */
+.app{display:grid; grid-template-columns:270px 1fr; min-height:100vh;}
+.sidebar{
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  border-right:1px solid var(--border-soft); background:var(--bg-alt);
+  padding:22px 16px 40px;
+}
+.brand{display:flex; align-items:center; gap:10px; padding:4px 6px 20px; border-bottom:1px solid var(--border-soft); margin-bottom:16px;}
+.brand-mark{width:30px;height:30px;border-radius:6px;background:linear-gradient(135deg,var(--amber),#c9791f);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;color:#0a0e14;font-size:13px;flex:none;}
+.brand-name{font-family:var(--display); font-size:14.5px; font-weight:600; color:#fff; line-height:1.2;}
+.brand-sub{font-family:var(--mono); font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em;}
+
+.navgroup{margin-bottom:6px;}
+.navgroup-label{font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-faint); padding:14px 10px 6px;}
+.navlink{
+  display:flex; gap:10px; align-items:baseline; padding:7px 10px; border-radius:7px;
+  color:var(--text-dim); text-decoration:none; font-size:13.5px; transition:background .15s, color .15s;
+}
+.navlink:hover{background:var(--panel); color:var(--text);}
+.navlink.active{background:var(--panel2); color:#fff;}
+.navlink .ch{font-family:var(--mono); color:var(--amber); font-size:11px; min-width:24px;}
+
+.main{min-width:0;}
+.section{padding:64px 48px; max-width:980px; margin:0 auto; border-bottom:1px solid var(--border-soft);}
+.section:last-child{border-bottom:none;}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr;}
+  .sidebar{position:relative; height:auto;}
+  .section{padding:40px 20px;}
+}
+
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--amber); margin-bottom:10px; display:flex; align-items:center; gap:10px;}
+.eyebrow .line{height:1px; width:28px; background:var(--amber-dim);}
+h2.title{font-size:clamp(26px,3.4vw,38px); margin-bottom:6px;}
+.subtitle{font-size:16.5px; color:var(--text-dim); max-width:640px; margin-bottom:34px;}
+
+/* ---------- reusable components ---------- */
+.card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px; margin:20px 0;}
+.card h3{font-size:17px; margin-bottom:8px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+.intuition{
+  border-left:3px solid var(--teal); background:linear-gradient(90deg, rgba(63,214,196,.07), transparent);
+  padding:16px 20px; border-radius:0 8px 8px 0; margin:22px 0;
+}
+.intuition .lbl{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--teal); margin-bottom:6px;}
+
+.insight{
+  border-left:3px solid var(--amber); background:linear-gradient(90deg, rgba(240,163,57,.08), transparent);
+  padding:16px 20px; border-radius:0 8px 8px 0; margin:22px 0;
+}
+.insight .lbl{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--amber); margin-bottom:6px;}
+
+.warn{
+  border-left:3px solid var(--rose); background:linear-gradient(90deg, rgba(239,107,107,.08), transparent);
+  padding:16px 20px; border-radius:0 8px 8px 0; margin:22px 0;
+}
+.warn .lbl{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--rose); margin-bottom:6px;}
+
+.tryit{
+  border:1px solid var(--border); border-radius:var(--radius); background:var(--panel2);
+  margin:26px 0; overflow:hidden;
+}
+.tryit-head{
+  display:flex; align-items:center; gap:10px; padding:12px 18px; background:var(--bg-alt);
+  border-bottom:1px solid var(--border); font-family:var(--mono); font-size:12px; color:var(--amber);
+  text-transform:uppercase; letter-spacing:.08em;
+}
+.tryit-head::before{content:'●'; color:var(--teal); font-size:9px;}
+.tryit-body{padding:20px 22px;}
+
+.formula-box{
+  background:var(--bg-alt); border:1px solid var(--border); border-radius:8px;
+  padding:18px 22px; margin:18px 0; overflow-x:auto; text-align:center;
+}
+.formula-box .cap{font-family:var(--mono); font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; text-align:left; margin-bottom:8px;}
+
+.controls{display:flex; flex-wrap:wrap; gap:22px; margin-bottom:16px;}
+.ctrl{display:flex; flex-direction:column; gap:6px; min-width:150px; flex:1;}
+.ctrl label{font-family:var(--mono); font-size:11.5px; color:var(--text-dim); display:flex; justify-content:space-between;}
+.ctrl label .val{color:var(--amber);}
+input[type=range]{
+  -webkit-appearance:none; width:100%; height:4px; border-radius:2px; background:var(--border); outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--amber);
+  cursor:pointer; border:2px solid #0a0e14; box-shadow:0 0 0 1px var(--amber);
+}
+input[type=range]::-moz-range-thumb{
+  width:15px; height:15px; border-radius:50%; background:var(--amber); cursor:pointer; border:2px solid #0a0e14;
+}
+select, .btn{
+  background:var(--panel); border:1px solid var(--border); color:var(--text); border-radius:6px;
+  padding:8px 12px; font-family:var(--mono); font-size:12.5px; cursor:pointer;
+}
+.btn{background:var(--amber); color:#0a0e14; border:none; font-weight:600; transition:filter .15s;}
+.btn:hover{filter:brightness(1.1);}
+.btn.secondary{background:var(--panel); color:var(--text); border:1px solid var(--border);}
+.btn.secondary:hover{border-color:var(--amber); color:var(--amber);}
+.btnrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+
+canvas{max-width:100%; display:block; border-radius:6px;}
+.chartwrap{background:var(--bg-alt); border:1px solid var(--border-soft); border-radius:8px; padding:12px; margin:14px 0;}
+.legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; font-family:var(--mono); font-size:11.5px; color:var(--text-dim);}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.legend i{width:14px; height:3px; border-radius:2px; display:inline-block;}
+
+.readout{display:flex; gap:22px; flex-wrap:wrap; margin-top:14px;}
+.readout .stat{background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:10px 16px; min-width:120px;}
+.readout .stat .k{font-family:var(--mono); font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em;}
+.readout .stat .v{font-family:var(--mono); font-size:20px; color:var(--amber); margin-top:2px;}
+
+table{border-collapse:collapse; width:100%; margin:16px 0; font-size:14px;}
+th,td{border:1px solid var(--border); padding:9px 12px; text-align:left;}
+th{background:var(--bg-alt); font-family:var(--mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim);}
+td{color:var(--text-dim);}
+td.num, th.num{text-align:right; font-family:var(--mono);}
+
+.tag{display:inline-block; font-family:var(--mono); font-size:10.5px; padding:2px 8px; border-radius:20px; border:1px solid var(--border); color:var(--text-dim); margin-right:6px;}
+.tag.gen1{border-color:var(--teal-dim); color:var(--teal);}
+.tag.gen2{border-color:var(--amber-dim); color:var(--amber);}
+.tag.gen3{border-color:var(--violet-dim); color:var(--violet);}
+
+.hero{padding:90px 48px 70px; max-width:1100px; margin:0 auto;}
+.hero-kicker{font-family:var(--mono); color:var(--teal); font-size:12.5px; letter-spacing:.15em; text-transform:uppercase; margin-bottom:18px;}
+.hero h1{font-size:clamp(34px,5.4vw,64px); line-height:1.05; max-width:900px;}
+.hero .lede{font-size:18px; color:var(--text-dim); max-width:640px; margin:20px 0 34px;}
+.ticker{
+  font-family:var(--mono); font-size:13px; color:var(--teal); background:var(--panel);
+  border:1px solid var(--border); border-radius:8px; padding:10px 16px; overflow:hidden; white-space:nowrap;
+  margin-bottom:34px;
+}
+.ticker span{margin-right:34px;}
+
+.chapternum{font-family:var(--mono); font-size:64px; color:var(--border); position:absolute; right:48px; top:56px; font-weight:600; user-select:none; z-index:0; pointer-events:none; opacity:.7;}
+.section{position:relative;}
+.section > *{position:relative; z-index:1;}
+h2.title{max-width:calc(100% - 150px);}
+
+.footer{padding:60px 48px 90px; text-align:center;}
+.footer p{color:var(--text-faint); font-size:13px;}
+
+details.deep{margin:18px 0; border:1px solid var(--border); border-radius:8px; background:var(--bg-alt); overflow:hidden;}
+details.deep summary{padding:12px 18px; cursor:pointer; font-family:var(--mono); font-size:12.5px; color:var(--amber); text-transform:uppercase; letter-spacing:.06em; list-style:none;}
+details.deep summary::-webkit-details-marker{display:none;}
+details.deep summary::before{content:'▸ '; }
+details.deep[open] summary::before{content:'▾ ';}
+details.deep .deep-body{padding:4px 18px 18px;}
+
+.flash{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:18px 20px; cursor:pointer; user-select:none; transition:border-color .15s;}
+.flash:hover{border-color:var(--amber);}
+.flash .q{font-family:var(--mono); font-size:12px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;}
+.flash .a{color:var(--text); font-size:14.5px; display:none;}
+.flash.open .a{display:block; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
+.flash .toggle{float:right; font-family:var(--mono); color:var(--amber); font-size:12px;}
+
+.badge-row{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+.pill{font-family:var(--mono); font-size:11px; padding:4px 10px; border-radius:20px; background:var(--panel2); border:1px solid var(--border); color:var(--text-dim);}
+
+::-webkit-scrollbar{width:10px; height:10px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border); border-radius:5px;}
+::-webkit-scrollbar-thumb:hover{background:var(--amber-dim);}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ============ SIDEBAR ============ -->
+<nav class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-mark">FX</div>
+    <div>
+      <div class="brand-name">The Exotics Desk</div>
+      <div class="brand-sub">Field guide · v1.0</div>
+    </div>
+  </div>
+
+  <div class="navgroup">
+    <div class="navlink" data-target="hero"><span class="ch">·</span> Start here</div>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-label">Ch. 19</div>
+    <a class="navlink" href="#pricing-why" data-target="pricing-why"><span class="ch">19.0</span> Why models exist</a>
+    <a class="navlink" href="#heston" data-target="heston"><span class="ch">19.1</span> Stochastic volatility</a>
+    <a class="navlink" href="#localvol" data-target="localvol"><span class="ch">19.2</span> Local volatility</a>
+    <a class="navlink" href="#mixedvol" data-target="mixedvol"><span class="ch">19.3</span> Mixed volatility</a>
+    <a class="navlink" href="#jumps" data-target="jumps"><span class="ch">19.4</span> Jump diffusion</a>
+    <a class="navlink" href="#stochrates" data-target="stochrates"><span class="ch">19.5</span> Stochastic rates</a>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-label">Ch. 20</div>
+    <a class="navlink" href="#taxonomy" data-target="taxonomy"><span class="ch">20.0</span> The exotics family tree</a>
+    <a class="navlink" href="#barrierzoo" data-target="barrierzoo"><span class="ch">20.1</span> The barrier zoo</a>
+    <a class="navlink" href="#gen23" data-target="gen23"><span class="ch">20.2</span> 2nd &amp; 3rd gen exotics</a>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-label">Ch. 21</div>
+    <a class="navlink" href="#digitals" data-target="digitals"><span class="ch">21.0</span> European digitals</a>
+    <a class="navlink" href="#digital-replication" data-target="digital-replication"><span class="ch">21.1</span> Replication</a>
+    <a class="navlink" href="#digital-pricer" data-target="digital-pricer"><span class="ch">21.2</span> Live pricer</a>
+    <a class="navlink" href="#pinrisk" data-target="pinrisk"><span class="ch">21.3</span> Gamma &amp; pin risk</a>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-label">Ch. 22</div>
+    <a class="navlink" href="#eurobarrier" data-target="eurobarrier"><span class="ch">22.0</span> European barriers</a>
+    <a class="navlink" href="#intrinsic" data-target="intrinsic"><span class="ch">22.1</span> Intrinsic value</a>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-label">Ch. 23</div>
+    <a class="navlink" href="#touch" data-target="touch"><span class="ch">23.0</span> Touch options</a>
+    <a class="navlink" href="#montecarlo" data-target="montecarlo"><span class="ch">23.1</span> Monte Carlo lab</a>
+    <a class="navlink" href="#greeks-touch" data-target="greeks-touch"><span class="ch">23.2</span> Delta / vega / gamma</a>
+    <a class="navlink" href="#dnt" data-target="dnt"><span class="ch">23.3</span> Double-no-touch</a>
+  </div>
+
+  <div class="navgroup">
+    <div class="navlink" data-target="recap"><span class="ch">·</span> Recap &amp; flashcards</div>
+  </div>
+</nav>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+
+<section class="hero" id="hero">
+  <div class="hero-kicker">An interactive field guide · Simulations included</div>
+  <h1>How the world's FX <span style="color:var(--amber)">exotic options</span> desks actually think.</h1>
+  <p class="lede">You don't need a PhD to understand this — you need the right pictures. This guide rebuilds five chapters of an FX derivatives trading manual from first principles: what a pricing model is <em>for</em>, why a barrier option is really two simpler options glued together, and why traders sometimes shout at a screen to make the price move. Every idea comes with something you can drag, click, or simulate.</p>
+  <div class="ticker mono" id="tickertape"></div>
+  <div class="btnrow">
+    <a href="#pricing-why" class="btn">Begin: Chapter 19 →</a>
+    <a href="#recap" class="btn secondary">Skip to flashcards</a>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- CHAPTER 19 — PRICING MODELS -->
+<!-- ======================================================================= -->
+
+<section class="section" id="pricing-why">
+  <div class="chapternum">19</div>
+  <div class="eyebrow"><span class="line"></span> Chapter 19 · Pricing Models</div>
+  <h2 class="title">Why do we even need a "model"?</h2>
+  <p class="subtitle">A pricing model is not a crystal ball. It's a translator — it takes the prices the market already agrees on for simple contracts, and uses them to infer a fair price for a complicated contract nobody is directly quoting.</p>
+
+  <div class="intuition">
+    <div class="lbl">Build the intuition</div>
+    <p style="color:var(--text); margin:0;">Imagine you know the price of apples and the price of oranges. Someone asks: "what should a fruit basket with 2 apples and 3 oranges cost?" You don't need a new theory of fruit — you just <em>add up what you already know</em>. Vanilla FX options (calls and puts) are the apples and oranges. Their market prices, across every strike and every maturity, are visible on every trading screen. An exotic contract — a barrier, a touch, a digital — is the fruit basket. A pricing model is the arithmetic that turns "what vanillas cost" into "what this basket should cost."</p>
+  </div>
+
+  <p>The chain of logic runs left to right, and every arrow is a real, computable step:</p>
+
+  <div class="chartwrap" style="padding:26px 18px;">
+    <canvas id="cv-flow" width="900" height="330"></canvas>
+  </div>
+
+  <p>Vanilla market quotes (ATM volatility, risk reversals, butterflies — don't worry, we'll define these) get assembled into a <b>volatility smile</b> at one maturity, and smiles across every maturity stack into a full <b>volatility surface</b>. That surface does two things simultaneously: it directly reprices every vanilla option, and it becomes the calibration target for an <b>exotic pricing model</b>. The model, once calibrated, can price contracts that have no direct market quote at all — a knock-out barrier, a touch, a digital.</p>
+
+  <div class="insight">
+    <div class="lbl">The one rule that governs this entire chapter</div>
+    <p style="color:var(--text); margin:0;">More features in a model does <em>not</em> automatically mean a better price. Every extra parameter (stochastic volatility, jumps, stochastic rates) has to be calibrated, and calibration takes time. A five-hour price is useless to a trader who needs to quote a client in five seconds, or to a risk manager who needs to revalue an entire book before the market gaps. So traders pick the <b>simplest model whose dynamic matches the contract's real risk</b> — nothing more.</p>
+  </div>
+
+  <p>Exotic models split into two families, and it's worth knowing which family a model belongs to before you ever look at its formula:</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="color:var(--teal);">Smile models</h3>
+      <p>Calibrated to the volatility surface. They answer: <i>"given how the market prices risk at every strike, what's the fair price of this exotic?"</i> Interest rates are usually treated as fixed/deterministic. Includes: stochastic volatility, local volatility, mixed volatility, jump diffusion.</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--violet);">Interest rate models</h3>
+      <p>Let interest rates move <em>randomly</em>, and even correlate with spot. They matter most for long-dated contracts (roughly 2+ years) where a decade of possible rate paths meaningfully changes the value of a payoff. Volatility of the underlying is usually treated as fixed/deterministic.</p>
+    </div>
+  </div>
+
+  <p>Some models combine both — but remember the rule above. We'll walk through each smile model in turn, because they're the ones you'll touch every single day on a trading desk, and each one has a distinct, learnable "personality."</p>
+</section>
+
+<!-- ---------------- HESTON / STOCHASTIC VOL ---------------- -->
+<section class="section" id="heston">
+  <div class="eyebrow"><span class="line"></span> 19.1 · Smile Models</div>
+  <h2 class="title">Stochastic volatility: let volatility have a life of its own</h2>
+  <p class="subtitle">Black-Scholes assumes volatility is one fixed number for the life of the option. In reality, volatility itself jitters around randomly — sometimes calm, sometimes violent. Stochastic volatility models give volatility <em>its own random process</em>, correlated with spot.</p>
+
+  <p>The most famous of these is the <b>Heston model</b> (1993). It looks intimidating in equation form, but it's really just two coupled random walks: one for spot, one for variance (volatility squared).</p>
+
+  <div class="formula-box">
+    <div class="cap">Heston stochastic differential equations</div>
+    $$\frac{dS_t}{S_t} = (r_{CCY2}-r_{CCY1})\,dt + \sqrt{v_t}\,dW_{1,t}$$
+    $$dv_t = \lambda(\alpha - v_t)\,dt + \beta\sqrt{v_t}\left(\rho\, dW_{1,t} + \sqrt{1-\rho^2}\, dW_{2,t}\right)$$
+  </div>
+
+  <div class="grid3">
+    <div class="card"><h3 class="mono" style="color:var(--amber); font-size:14px;">α — long-run variance</h3><p style="font-size:13.5px;">Where variance drifts back to over time. Think of it as "gravity" pulling volatility toward its long-term average.</p></div>
+    <div class="card"><h3 class="mono" style="color:var(--amber); font-size:14px;">λ — mean reversion speed</h3><p style="font-size:13.5px;">How hard that gravity pulls. High λ snaps volatility back quickly; low λ lets it wander.</p></div>
+    <div class="card"><h3 class="mono" style="color:var(--amber); font-size:14px;">β — vol-of-vol</h3><p style="font-size:13.5px;">How jittery volatility itself is. This is the parameter that controls the <em>wings</em> of the smile.</p></div>
+  </div>
+  <p>...and <span class="num">ρ</span> (correlation) ties the two random walks together — it's the parameter that controls the <em>tilt</em> (skew) of the smile.</p>
+
+  <div class="intuition">
+    <div class="lbl">Build the intuition</div>
+    <p style="color:var(--text); margin:0;">Picture a coin that itself has a wobble in how biased it is. Most of the time it's a fair coin (50/50), but sometimes it drifts toward "a bit biased to heads," and sometimes toward "a bit biased to tails," and how far it drifts is random too. Over many flips, that wobble makes extreme outcomes (way more heads than expected, or way more tails) <em>more likely</em> than a plain fair coin would ever produce. That's exactly what vol-of-vol does to spot: it fattens the tails of where spot can end up, which is precisely what a volatility smile is describing — options far from today's price being worth more than flat (constant-volatility) Black-Scholes would say.</p>
+  </div>
+
+  <div class="tryit" id="heston-lab">
+    <div class="tryit-head">Try it — build a smile with the Heston dials</div>
+    <div class="tryit-body">
+      <p style="margin-top:0;">Move the sliders and watch the volatility smile deform in real time. This uses a parametric approximation of Heston's qualitative behavior (a full closed-form Heston price requires numerically integrating a characteristic function) — but it reproduces exactly the shapes from Exhibits 19.2–19.4.</p>
+      <div class="controls">
+        <div class="ctrl"><label>ATM volatility <span class="val" id="hv-atm-l">10.0%</span></label><input type="range" id="hv-atm" min="5" max="20" step="0.1" value="10"></div>
+        <div class="ctrl"><label>Vol-of-vol (β) <span class="val" id="hv-beta-l">0.00</span></label><input type="range" id="hv-beta" min="0" max="2" step="0.02" value="0"></div>
+        <div class="ctrl"><label>Correlation (ρ) <span class="val" id="hv-rho-l">0.00</span></label><input type="range" id="hv-rho" min="-0.9" max="0.9" step="0.02" value="0"></div>
+      </div>
+      <div class="btnrow" style="margin-bottom:10px;">
+        <button class="btn secondary" id="hv-preset-flat">Reset (flat)</button>
+        <button class="btn secondary" id="hv-preset-wing">Preset: wings only</button>
+        <button class="btn secondary" id="hv-preset-tilt">Preset: skew tilt</button>
+      </div>
+      <div class="chartwrap"><canvas id="cv-heston" width="880" height="380"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--amber)"></i> Implied volatility smile</span>
+        <span><i style="background:var(--text-faint)"></i> Flat 10% reference</span>
+      </div>
+    </div>
+  </div>
+
+  <p>Notice something the textbook explicitly flags: when you raise β from zero, <em>both wings rise, and so does the ATM level</em> — unlike a typical hand-drawn smile where the ATM point usually stays anchored. That's a real quirk of Heston's dynamics, not a drawing error. And when you raise ρ, the smile stops being a symmetric smile and starts <em>tilting</em>: one side rises relative to the other, which is exactly what a market risk reversal looks like.</p>
+
+  <div class="warn">
+    <div class="lbl">Where the model runs into trouble</div>
+    <p style="color:var(--text); margin:0;">To fit the market's smile well, Heston (and stochastic vol models generally) typically need <em>more</em> volatility-of-implied-volatility than is actually observed. Traders call this "<b>overvaluing volatility convexity</b>." The practical symptom: prices on contracts with heavy convexity exposure — like double-no-touch options — often come out <em>too high</em> versus the real interbank broker market. The skew can also get swamped by mean reversion, and at short maturities some stochastic vol models simply can't generate enough vol-of-vol to match the smile at all.</p>
+  </div>
+
+  <details class="deep">
+    <summary>Deeper: why is it called "sticky delta"?</summary>
+    <div class="deep-body">
+      <p>Pure stochastic volatility models don't depend on the <em>level</em> of spot at all — only on the randomness layered on top of it. That means if spot moves, the model regenerates the <em>same shaped</em> smile centered on the new spot (in delta space). Traders call this <b>sticky delta</b>: the volatility quoted for "the 25-delta call" stays roughly the same even as spot drifts, because the smile is anchored to moneyness (delta), not to a fixed price level. Compare this to local volatility below, which behaves almost oppositely.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ---------------- LOCAL VOL ---------------- -->
+<section class="section" id="localvol">
+  <div class="eyebrow"><span class="line"></span> 19.2 · Smile Models</div>
+  <h2 class="title">Local volatility: one deterministic surface, no randomness in vol itself</h2>
+  <p class="subtitle">Developed by Bruno Dupire in the mid-1990s. Instead of giving volatility its own random process, local volatility makes it a fixed — but spot- and time-dependent — function: <span class="mono">σ(S,t)</span>.</p>
+
+  <div class="formula-box">
+    <div class="cap">Local volatility SDE</div>
+    $$\frac{dS_t}{S_t} = (r_{CCY2}-r_{CCY1})\,dt + \sigma(S_t,t)\,dW_t$$
+  </div>
+
+  <div class="intuition">
+    <div class="lbl">Build the intuition</div>
+    <p style="color:var(--text); margin:0;">Think of local volatility as a <em>terrain map</em>, not a weather forecast. At every possible (spot level, future date) coordinate, there's one fixed number for how bumpy the road is there — no randomness in the bumpiness itself, only in which road spot happens to travel. Dupire's insight was that if you know the entire vanilla volatility surface, there's a unique such terrain map that reproduces it exactly, with zero free parameters to guess.</p>
+  </div>
+
+  <p>Because there's nothing to calibrate — the terrain map is <em>solved for</em> directly from market vanilla prices — local volatility is fast to set up and gives an exact fit to the vanilla surface, no exceptions. That's a big practical advantage.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Compare implied vol vs. the local vol it implies</div>
+    <div class="tryit-body">
+      <p style="margin-top:0;">Local volatility is always <em>steeper</em> than implied volatility — roughly twice the slope, a mathematical consequence of Dupire's formula. Toggle between a pair with a small downside skew (USD/JPY-like) and one with a large topside skew (USD/BRL-like):</p>
+      <div class="btnrow" style="margin-bottom:14px;">
+        <button class="btn" id="lv-jpy">USD/JPY-style (small downside skew)</button>
+        <button class="btn secondary" id="lv-brl">USD/BRL-style (large topside skew)</button>
+      </div>
+      <div class="chartwrap"><canvas id="cv-localvol" width="880" height="380"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--teal)"></i> Implied volatility (what vanillas trade at)</span>
+        <span><i style="background:var(--amber)"></i> Local volatility (the terrain map)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="lbl">Where the model runs into trouble</div>
+    <p style="color:var(--text); margin:0;">The opposite problem to Heston: because there's no actual randomness in volatility, local vol <b>undervalues volatility convexity</b>. Double-no-touch prices tend to come out <em>too low</em>. Forward smiles are undervalued too (query the model for the 1yr-in-1yr forward smile and you'll typically see much flatter wings and skew than today's 1yr smile shows — a real, checkable diagnostic). And because volatility is a fixed function of time and spot with no randomness of its own, local vol should never be used to price forward volatility agreements or forward-start options, whose entire value comes from the randomness of <em>future</em> implied volatility.</p>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">A free diagnostic tool</div>
+    <p style="color:var(--text); margin:0;">If the vanilla volatility surface you feed into Dupire's formula contains an arbitrage — a call spread priced with the wrong sign, or a calendar spread that's cheaper further out — the local volatility surface becomes undefined (you'd need to take a square root of a negative number). In practice, traders exploit this: <b>if your local vol model blows up, that's a red flag your vanilla surface itself has an arbitrage in it.</b></p>
+  </div>
+</section>
+
+<!-- ---------------- MIXED VOL ---------------- -->
+<section class="section" id="mixedvol">
+  <div class="eyebrow"><span class="line"></span> 19.3 · Smile Models</div>
+  <h2 class="title">Mixed volatility: splitting the difference on purpose</h2>
+  <p class="subtitle">Stochastic vol overvalues convexity. Local vol undervalues it. So what does almost every FX derivatives desk on the planet actually trade off of? A blend of the two — a "stochastic local volatility" model.</p>
+
+  <div class="formula-box">
+    <div class="cap">One way to blend them — a Heston model with a local-vol component and a mixing weight ξ</div>
+    $$\frac{dS_t}{S_t} = (r_{CCY2}-r_{CCY1})\,dt + \sqrt{v_t}\,\hat\sigma(S_t,t)\,dW_{1,t}$$
+    $$dv_t = \lambda(t)(\alpha - v_t)\,dt + \xi(t)\beta(t)\sqrt{v_t}\left(\rho(t)\,dW_{1,t}+\sqrt{1-\rho(t)^2}\,dW_{2,t}\right)$$
+  </div>
+
+  <p>A mixing weight of <span class="num">0%</span> is pure local volatility. A mixing weight of <span class="num">100%</span> is pure stochastic volatility. Everything in between interpolates — and traders set that weight (per tenor, even) to match whatever the interbank exotics broker market is actually paying for convexity.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — dial the mixing weight and watch the smile interpolate</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Mixing weight ξ <span class="val" id="mv-w-l">50%</span></label><input type="range" id="mv-w" min="0" max="100" step="1" value="50"></div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-mixedvol" width="880" height="380"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--teal)"></i> Pure local vol (ξ=0%)</span>
+        <span><i style="background:var(--violet)"></i> Pure stochastic vol (ξ=100%)</span>
+        <span><i style="background:var(--amber)"></i> Current mix</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">Why this one model dominates the industry</div>
+    <p style="color:var(--text); margin:0;">Variations of mixed volatility models are used by the vast majority of FX derivatives desks to price exotics out to about two years, in most currency pairs. It's so effective that development of brand-new single-asset pricing models has largely stopped — the industry converged. For obscure currency pairs with too few interbank quotes to calibrate a mixing weight directly, traders borrow the mixing weight from a similar, more liquid pair.</p>
+  </div>
+</section>
+
+<!-- ---------------- JUMP DIFFUSION ---------------- -->
+<section class="section" id="jumps">
+  <div class="eyebrow"><span class="line"></span> 19.4 · Smile Models</div>
+  <h2 class="title">Jump diffusion: when spot doesn't glide, it teleports</h2>
+  <p class="subtitle">Every model so far assumes spot moves continuously — no matter how small a time slice you look at, spot only creeps. Real markets sometimes gap: a central bank decision, a currency peg breaking, a surprise headline. The Merton model (1976) adds sudden, discontinuous jumps on top of ordinary diffusion.</p>
+
+  <div class="formula-box">
+    <div class="cap">Merton jump diffusion SDE</div>
+    $$\frac{dS_t}{S_t} = (r_{CCY2}-r_{CCY1}-\lambda\kappa)\,dt + \sigma\,dW_t + (y_t-1)\,dN_t$$
+  </div>
+  <p style="font-size:14.5px;">Here <span class="mono">N_t</span> is a Poisson process — it fires jump events at average rate <span class="mono">λ</span> per year — and each jump multiplies spot by a log-normally distributed factor <span class="mono">y_t</span> with mean <span class="mono">κ</span>. Notice the drift term picks up a <span class="mono">-λκ</span> correction: since jumps add extra randomness, the steady drift has to be adjusted to compensate, or the model's average path would drift to the wrong place.</p>
+
+  <div class="tryit" id="jump-lab">
+    <div class="tryit-head">Try it — simulate a spot path with jumps</div>
+    <div class="tryit-body">
+      <p style="margin-top:0;">Each run draws a fresh random path: ordinary Brownian wiggling, punctuated by occasional jumps whose timing and size are both random. This reproduces Exhibit 19.8.</p>
+      <div class="controls">
+        <div class="ctrl"><label>Diffusion volatility σ <span class="val" id="jp-sig-l">10%</span></label><input type="range" id="jp-sig" min="2" max="30" step="1" value="10"></div>
+        <div class="ctrl"><label>Jump intensity λ (jumps/yr) <span class="val" id="jp-lam-l">2.0</span></label><input type="range" id="jp-lam" min="0" max="10" step="0.2" value="2"></div>
+        <div class="ctrl"><label>Jump size std-dev <span class="val" id="jp-jsz-l">15%</span></label><input type="range" id="jp-jsz" min="2" max="40" step="1" value="15"></div>
+      </div>
+      <div class="btnrow" style="margin-bottom:10px;">
+        <button class="btn" id="jp-run">Simulate new path ⟳</button>
+        <label style="font-family:var(--mono); font-size:12px; color:var(--text-dim); display:flex; align-items:center; gap:6px;"><input type="checkbox" id="jp-anim" checked> animate</label>
+      </div>
+      <div class="chartwrap"><canvas id="cv-jump" width="880" height="360"></canvas></div>
+      <div class="readout">
+        <div class="stat"><div class="k">Jumps this path</div><div class="v" id="jp-count">–</div></div>
+        <div class="stat"><div class="k">Terminal spot</div><div class="v" id="jp-terminal">–</div></div>
+        <div class="stat"><div class="k">Max single jump</div><div class="v" id="jp-maxjump">–</div></div>
+      </div>
+    </div>
+  </div>
+
+  <p>Merton is popular for a subtle reason beyond realism: it has a semi-closed-form price for vanilla options, so — just like Heston — it can be calibrated fast. And like Heston, its parameters map intuitively onto smile shape: jump <em>frequency</em> and jump <em>size distribution</em> directly sculpt the wings and skew.</p>
+
+  <div class="warn">
+    <div class="lbl">Where it actually gets used</div>
+    <p style="color:var(--text); margin:0;">Jump models don't consistently match interbank exotics prices in liquid, freely-floating currency pairs — real markets there don't behave like clean Poisson jumps. But in <b>managed or pegged currency pairs</b>, where spot genuinely sits still for long stretches and then jumps discontinuously when a peg adjusts or breaks, jump diffusion's dynamic is a much better match to reality. It's also used as a diagnostic: back out the jump probability and size the market's smile implies, and compare it against your own intuition about devaluation risk.</p>
+  </div>
+</section>
+
+<!-- ---------------- STOCHASTIC RATES ---------------- -->
+<section class="section" id="stochrates">
+  <div class="eyebrow"><span class="line"></span> 19.5 · Interest Rate Models</div>
+  <h2 class="title">Stochastic interest rates: the other source of randomness</h2>
+  <p class="subtitle">Every model above quietly assumed interest rates in both currencies were fixed numbers. In reality, rates wiggle too — and on long-dated contracts, that wiggle matters.</p>
+
+  <div class="formula-box">
+    <div class="cap">Adding random "short rate" processes to both currencies</div>
+    $$\frac{dS_t}{S_t}=(r_{CCY2,t}-r_{CCY1,t})\,dt+\sigma\,dW_t$$
+    $$dr_{CCY1,t}=a_1(t)\,dt+b_1\,dW_{1,t} \qquad dr_{CCY2,t}=a_2(t)\,dt+b_2\,dW_{2,t}$$
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>When it matters</h3>
+      <p>Mostly on contracts beyond roughly two years to maturity, or on any contract with a large explicit sensitivity to rates. Below that horizon, the extra complexity usually isn't worth the calibration cost — remember the rule from the top of this chapter.</p>
+    </div>
+    <div class="card">
+      <h3>The trap to avoid</h3>
+      <p>You cannot just price a deal with a smile model, price it again with a rate model, and <em>add</em> the two adjustments together. Smile and interest rates genuinely interact — which is why local volatility is often layered <em>inside</em> a stochastic rate model, since it adds smile realism with zero extra parameters to calibrate.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- CHAPTER 20 — PRODUCT CLASSIFICATION -->
+<!-- ======================================================================= -->
+
+<section class="section" id="taxonomy">
+  <div class="chapternum">20</div>
+  <div class="eyebrow"><span class="line"></span> Chapter 20 · Product Classification</div>
+  <h2 class="title">The exotics family tree</h2>
+  <p class="subtitle">Exotic products are grouped by "generation" — roughly, how long they've existed in the market. But here's the counter-intuitive part the textbook is explicit about:</p>
+
+  <div class="insight">
+    <div class="lbl">The rule that surprises everyone new to this desk</div>
+    <p style="color:var(--text); margin:0;">Higher-generation exotics are often <em>easier</em> to risk manage than first-generation ones, not harder. Features like averaging, accruing notionals, or knockout targets often <em>reduce</em> risk, because they smooth out the very discontinuities that make first-generation products dangerous. Conceptually simple products (a digital, a barrier) are frequently the hardest to actually trade near expiry.</p>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="badge-row"><span class="pill" style="border-color:var(--teal-dim); color:var(--teal);">1st generation</span></div>
+      <h3>The building blocks</h3>
+      <p style="font-size:14px;">European digitals, touch options (one-touch / no-touch), European barriers, American barriers, American vanillas, quanto options. Everything else on this desk is assembled from these pieces.</p>
+    </div>
+    <div class="card">
+      <div class="badge-row"><span class="pill" style="border-color:var(--amber-dim); color:var(--amber);">2nd generation</span></div>
+      <h3>Extending forwards &amp; vanillas</h3>
+      <p style="font-size:14px;">Window barriers, accrual options, target redemption forwards (TARFs), Asian (average rate) options, compound options, forward-start options.</p>
+    </div>
+    <div class="card">
+      <div class="badge-row"><span class="pill" style="border-color:var(--violet-dim); color:var(--violet);">3rd generation</span></div>
+      <h3>Multi-asset &amp; volatility products</h3>
+      <p style="font-size:14px;">Basket options, best-of/worst-of, dual digitals, volatility &amp; variance swaps, correlation swaps, forward volatility agreements. Usually risk-managed on separate books.</p>
+    </div>
+  </div>
+
+  <p>Chapters 21–23 of this guide (below) live entirely inside the first-generation family, because that's where the foundational intuition — payoff replication, intrinsic value, delta bleed, pin risk — gets built. Once you have that intuition, the higher generations are mostly clever recombinations of it.</p>
+</section>
+
+<!-- ---------------- BARRIER ZOO ---------------- -->
+<section class="section" id="barrierzoo">
+  <div class="eyebrow"><span class="line"></span> 20.1 · American Barrier Options</div>
+  <h2 class="title">The barrier zoo: it's all just geometry</h2>
+  <p class="subtitle">Every American barrier option's <em>name</em> — regular, reverse, ITM, double — is fully determined by one simple question: where does the barrier sit relative to the strike, and relative to where spot starts?</p>
+
+  <div class="intuition">
+    <div class="lbl">Build the intuition</div>
+    <p style="color:var(--text); margin:0;">A vanilla call only has value once spot is <em>above</em> the strike — that's its "in-the-money" side. A barrier sitting on the <em>other</em> side (out-of-the-money) just chops off the tail of the distribution before it can become valuable: cheaper option, simple story — a "regular" knock-out. A barrier sitting on the <em>same</em> side (in-the-money) is more dangerous: it can wipe out value that's already accrued — a "reverse" knock-out. Push the in-the-money barrier so close that spot starts already past it, and you get the special, extra-dangerous "ITM barrier" case, where the strike itself can never be touched again.</p>
+  </div>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — drag the barrier and watch it get classified live</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl">
+          <label>Option type</label>
+          <select id="bz-type">
+            <option value="call">EUR Call / USD Put</option>
+            <option value="put">EUR Put / USD Call</option>
+          </select>
+        </div>
+        <div class="ctrl">
+          <label>Barrier direction</label>
+          <select id="bz-dir">
+            <option value="out">Knock-out</option>
+            <option value="in">Knock-in</option>
+          </select>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="ctrl"><label>Strike <span class="val" id="bz-k-l">1.3000</span></label><input type="range" id="bz-k" min="1.15" max="1.45" step="0.005" value="1.30"></div>
+        <div class="ctrl"><label>Barrier <span class="val" id="bz-b-l">1.4500</span></label><input type="range" id="bz-b" min="1.15" max="1.45" step="0.005" value="1.45"></div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-barrierzoo" width="880" height="320"></canvas></div>
+      <div class="readout">
+        <div class="stat"><div class="k">Classification</div><div class="v" id="bz-class" style="font-size:16px;">–</div></div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Name</th><th>Barrier position vs. payoff</th><th>Intuition</th></tr>
+    <tr><td class="mono">Knock-out / knock-in (regular)</td><td>Out-of-the-money</td><td>Simply truncates or activates the tail of the payoff.</td></tr>
+    <tr><td class="mono">Reverse knock-out / knock-in</td><td>In-the-money</td><td>Can erase value that's already built up — much riskier near the barrier.</td></tr>
+    <tr><td class="mono">ITM barrier option</td><td>In-the-money, and spot starts even further ITM</td><td>The strike itself can never be reached again — it produces "no optionality."</td></tr>
+    <tr><td class="mono">Double knock-out / knock-in</td><td>Two barriers, one either side of spot</td><td>Truncates (or requires) both tails.</td></tr>
+    <tr><td class="mono">Transatlantic</td><td>One American + one European barrier</td><td>Usually: continuously-monitored knock-out plus an at-maturity-only knock-in.</td></tr>
+    <tr><td class="mono">KIKO</td><td>One knock-in + one knock-out, both American</td><td>Order of triggering matters — "knock-out until expiry" vs. "knock-out until knock-in."</td></tr>
+  </table>
+
+  <div class="insight">
+    <div class="lbl">One phrase, one universal risk-management rule</div>
+    <p style="color:var(--text); margin:0;">If you're <b>long a barrier</b> (you want it to trigger), that position naturally generates a <b>stop-loss order</b> in the underlying when hedging. If you're <b>short a barrier</b> (you don't want it to trigger), it naturally generates a <b>take-profit order</b>. This single sentence explains almost all of the delta-hedging behavior you'll see later in the touch options section.</p>
+  </div>
+</section>
+
+<!-- ---------------- 2ND / 3RD GEN ---------------- -->
+<section class="section" id="gen23">
+  <div class="eyebrow"><span class="line"></span> 20.2 · Beyond first generation</div>
+  <h2 class="title">A field guide to the rest of the menu</h2>
+  <p class="subtitle">You won't build pricing intuition for all of these today — but you should be able to recognize them on a term sheet. Each one is a specific twist on a forward or a vanilla payoff.</p>
+
+  <div class="grid2">
+    <div class="card"><span class="tag gen2">2nd gen</span><h3 style="font-size:15.5px;">Window barrier</h3><p style="font-size:13.5px;">A barrier that's only "live" for part of the option's life — front window (starts at inception) or rear window (starts later, runs to expiry).</p></div>
+    <div class="card"><span class="tag gen2">2nd gen</span><h3 style="font-size:15.5px;">Accrual option</h3><p style="font-size:13.5px;">Notional builds up over time based on daily fixes landing inside a range. The accrual forward is the most common variant.</p></div>
+    <div class="card"><span class="tag gen2">2nd gen</span><h3 style="font-size:15.5px;">Target redemption (TARF)</h3><p style="font-size:13.5px;">A strip of forwards that knocks out once cumulative client profit hits a target. Very common structured product with corporates.</p></div>
+    <div class="card"><span class="tag gen2">2nd gen</span><h3 style="font-size:15.5px;">Asian (average rate) option</h3><p style="font-size:13.5px;">Spot-at-maturity and/or the strike gets replaced by an <em>average</em> of fixings — smooths out single-day pin risk entirely.</p></div>
+    <div class="card"><span class="tag gen2">2nd gen</span><h3 style="font-size:15.5px;">Compound option</h3><p style="font-size:13.5px;">An option on an option — pay a premium now for the right to buy/sell a vanilla later.</p></div>
+    <div class="card"><span class="tag gen2">2nd gen</span><h3 style="font-size:15.5px;">Forward-start option</h3><p style="font-size:13.5px;">Strike (or barrier) gets set later, from a future spot fix — not known at trade inception.</p></div>
+    <div class="card"><span class="tag gen3">3rd gen</span><h3 style="font-size:15.5px;">Basket / best-of / worst-of / dual digital</h3><p style="font-size:13.5px;">Multi-currency-pair payoffs whose value depends heavily on <em>correlation</em> between the pairs — not just each pair's own smile.</p></div>
+    <div class="card"><span class="tag gen3">3rd gen</span><h3 style="font-size:15.5px;">Vol / variance / correlation swaps, FVAs</h3><p style="font-size:13.5px;">Pure bets on realized or forward-implied volatility and correlation themselves, rather than on spot direction.</p></div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- CHAPTER 21 — EUROPEAN DIGITAL OPTIONS -->
+<!-- ======================================================================= -->
+
+<section class="section" id="digitals">
+  <div class="chapternum">21</div>
+  <div class="eyebrow"><span class="line"></span> Chapter 21 · European Digital Options</div>
+  <h2 class="title">The simplest payoff that causes the most trouble</h2>
+  <p class="subtitle">A European digital pays a fixed lump of cash if spot finishes above (call) or below (put) a level at maturity — nothing in between. It's the cleanest possible bet: heads you get €1,000,000, tails you get zero.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Payoff at maturity — 100.00 USD/JPY digital call</div>
+    <div class="tryit-body">
+      <div class="chartwrap"><canvas id="cv-digital-payoff" width="880" height="300"></canvas></div>
+      <p style="margin:8px 0 0; font-size:13.5px;">Priced as a % of the payout notional — e.g. a quote of <span class="num">23.5% / 24.5%</span> on a USD1m payout means the buyer pays <span class="num">USD 245,000</span> for a shot at <span class="num">USD 1,000,000</span>. Around 50% roughly means "even money" — the forward sits close to the digital level.</p>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="lbl">The single hardest sentence in this chapter</div>
+    <p style="color:var(--text); margin:0;">The payoff jumps discontinuously across a single pip. Every other Greek exposure in this guide is a smooth curve — this one has a genuine cliff edge, and that cliff edge is the source of everything difficult about trading digitals near expiry.</p>
+  </div>
+</section>
+
+<section class="section" id="digital-replication">
+  <div class="eyebrow"><span class="line"></span> 21.1 · Replication</div>
+  <h2 class="title">Building a cliff out of two ramps</h2>
+  <p class="subtitle">You can manufacture a digital's step-function payoff by buying one vanilla call and selling another, very close by, in a large enough notional. As the two strikes squeeze together, the ramp between them gets steeper and steeper — approaching a true vertical cliff in the limit.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — squeeze the call spread into a digital</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Strike spread width <span class="val" id="rep-w-l">10.0 pips</span></label><input type="range" id="rep-w" min="0.2" max="10" step="0.1" value="10"></div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-replication" width="880" height="340"></canvas></div>
+      <div class="readout">
+        <div class="stat"><div class="k">Long strike</div><div class="v" id="rep-k1">–</div></div>
+        <div class="stat"><div class="k">Short strike</div><div class="v" id="rep-k2">–</div></div>
+        <div class="stat"><div class="k">Required notional / leg</div><div class="v" id="rep-notional">–</div></div>
+      </div>
+      <p style="font-size:13px; margin-top:12px;">Digital level 1.4000, USD 1,000,000 CCY2 payout, EUR/USD.</p>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    <div class="cap">CCY2-payout digital: notional needed in the replicating call spread</div>
+    $$N=\frac{X}{K_2-K_1}$$
+    <p style="font-size:13px; color:var(--text-dim); margin:8px 0 0;">X = payout, K₁ = long strike, K₂ = short strike. Tighter strikes ⇒ larger notional needed, because you're squeezing the same total payout into a narrower price range.</p>
+  </div>
+
+  <p>If instead the payout currency is CCY1, the same idea applies but the strikes must be flipped into reciprocal terms first (because a CCY1 payout naturally comes from a CCY2 notional) — the notionals per leg end up asymmetric even though the strikes look symmetric in price space.</p>
+
+  <div class="insight">
+    <div class="lbl">Why this matters beyond pricing</div>
+    <p style="color:var(--text); margin:0;">This replication isn't just theoretical. Traders literally hedge digital risk with real, tradeable vanilla call/put spreads — wide ones when there's plenty of time to expiry (the hedge stays relevant to roughly the 25-delta strike level, about one month out), tighter ones as expiry approaches and the true digital risk needs to be matched more precisely.</p>
+  </div>
+</section>
+
+<section class="section" id="digital-pricer">
+  <div class="eyebrow"><span class="line"></span> 21.2 · Pricing</div>
+  <h2 class="title">A live Black-Scholes digital pricer</h2>
+  <p class="subtitle">Under Black-Scholes, a digital's price is a direct readout of the cumulative normal distribution — literally, "the risk-neutral probability that spot finishes past the level," discounted back to today.</p>
+
+  <div class="formula-box">
+    <div class="cap">CCY2%-payout digital call price</div>
+    $$P_{CCY2\%} = e^{-r_{CCY2}T}\,N(d_2), \qquad d_2=\frac{\ln(S/K)+\left(r_{CCY2}-r_{CCY1}-\frac{\sigma^2}{2}\right)T}{\sigma\sqrt{T}}$$
+  </div>
+
+  <div class="tryit" id="bs-pricer">
+    <div class="tryit-head">Try it — price a European digital</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Spot (S) <span class="val" id="bs-s-l">1.3000</span></label><input type="range" id="bs-s" min="1.20" max="1.40" step="0.001" value="1.30"></div>
+        <div class="ctrl"><label>Digital level (K) <span class="val" id="bs-k-l">1.3000</span></label><input type="range" id="bs-k" min="1.20" max="1.40" step="0.001" value="1.30"></div>
+        <div class="ctrl"><label>Volatility σ <span class="val" id="bs-vol-l">10.0%</span></label><input type="range" id="bs-vol" min="2" max="30" step="0.5" value="10"></div>
+        <div class="ctrl"><label>Time to maturity <span class="val" id="bs-t-l">1.00 yr</span></label><input type="range" id="bs-t" min="0.02" max="2" step="0.01" value="1"></div>
+        <div class="ctrl"><label>CCY1 rate <span class="val" id="bs-r1-l">2.0%</span></label><input type="range" id="bs-r1" min="-2" max="10" step="0.25" value="2"></div>
+        <div class="ctrl"><label>CCY2 rate <span class="val" id="bs-r2-l">1.0%</span></label><input type="range" id="bs-r2" min="-2" max="10" step="0.25" value="1"></div>
+      </div>
+      <div class="readout">
+        <div class="stat"><div class="k">Digital call (CCY2%)</div><div class="v" id="bs-call">–</div></div>
+        <div class="stat"><div class="k">Digital put (CCY2%)</div><div class="v" id="bs-put">–</div></div>
+        <div class="stat"><div class="k">Call + Put</div><div class="v" id="bs-sum">–</div></div>
+        <div class="stat"><div class="k">d₂</div><div class="v" id="bs-d2">–</div></div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-bs-curve" width="880" height="320"></canvas></div>
+      <div class="legend"><span><i style="background:var(--amber)"></i> Digital call value across spot, at current inputs</span></div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">The identity you can check with the sliders above</div>
+    <p style="color:var(--text); margin:0;">A digital put plus a digital call with identical contract details must always sum to a <em>guaranteed</em> payout at maturity (someone always gets paid — spot is either above or below the level). Watch the "Call + Put" readout above stay pinned near 100% no matter how you move spot, volatility, or time. This holds for both theoretical value <em>and</em> real midmarket smile prices.</p>
+  </div>
+
+  <details class="deep">
+    <summary>Deeper: why is there a link to vanilla delta?</summary>
+    <div class="deep-body">
+      <p>Under Black-Scholes, a CCY1%-payout digital's price equals <em>exactly</em> the delta of a vanilla option struck at the same level, to the same expiry. Take one more derivative with respect to spot, and the digital's delta equals that vanilla's gamma. This is a genuinely useful mental shortcut for traders sizing digital risk on the fly — but it's a Black-Scholes-only relationship; it breaks once the smile is included, which is exactly why real desks price digitals via smile-aware replication (Section 21.1) rather than the flat-vol formula above.</p>
+    </div>
+  </details>
+
+  <p>Traders don't stop at the flat theoretical value (TV) above — the real, tradeable price sits on top of it as a <b>TV adjustment</b>, driven by the <em>slope</em> of the volatility smile at the digital level. A useful mental script: <i>"It's a digital call, so the payoff favors topside. That makes me effectively long vega to the downside. If the smile has a downside skew, I'd expect this to trade above flat-vol TV."</i></p>
+</section>
+
+<section class="section" id="pinrisk">
+  <div class="eyebrow"><span class="line"></span> 21.3 · Gamma &amp; Pin Risk</div>
+  <h2 class="title">The last day: half the payout, all at once</h2>
+  <p class="subtitle">As expiry approaches, a digital's gamma (and theta) explodes near the digital level — the curve is racing to become a vertical cliff in one trading day.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — the digital's shape collapses into a cliff as time runs out</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Time to maturity <span class="val" id="pr-t-l">1 month</span></label><input type="range" id="pr-t" min="0.003" max="0.09" step="0.001" value="0.083"></div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-pinrisk" width="880" height="340"></canvas></div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="lbl">Pin risk, in one number</div>
+    <p style="color:var(--text); margin:0;">If spot sits near the digital level one day before expiry, the digital's value is roughly 50%. At expiry it becomes either 0% or 100%. That means the <b>maximum possible one-day theta</b>, ignoring any hedge, is <b>half the total payout</b> — arriving all in a single trading session. This is exactly why, on the expiry date itself, traders concentrate on reducing worst-case final-day P&amp;L rather than trying to track smooth Greeks that no longer meaningfully exist.</p>
+  </div>
+
+  <p>Which side of the digital spot sits on going into that last day matters enormously — and asymmetrically:</p>
+  <div class="grid2">
+    <div class="card" style="border-color:var(--teal-dim);">
+      <h3 style="color:var(--teal); font-size:15px;">Spot on the winning (positive P&amp;L) side</h3>
+      <p style="font-size:14px;">Theta is <em>earned</em> every day — you start with positive carry, and only lose it if spot moves against you. This is the easier position to risk-manage: your bad outcome is "give back some of what you've already banked."</p>
+    </div>
+    <div class="card" style="border-color:var(--rose-dim);">
+      <h3 style="color:var(--rose); font-size:15px;">Spot on the losing (negative P&amp;L) side</h3>
+      <p style="font-size:14px;">Theta is <em>paid</em> every day, but there's a lottery-ticket-style gain if spot crosses. This is the harder position — you start behind, and experienced traders really have been known to shout at a screen, willing the spot rate to move.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- CHAPTER 22 — EUROPEAN BARRIER OPTIONS -->
+<!-- ======================================================================= -->
+
+<section class="section" id="eurobarrier">
+  <div class="chapternum">22</div>
+  <div class="eyebrow"><span class="line"></span> Chapter 22 · European Barrier Options</div>
+  <h2 class="title">A vanilla with a maturity-only trapdoor</h2>
+  <p class="subtitle">A European barrier only checks the barrier level <em>at maturity</em> — never in between. That's the whole difference from the American barriers in the next chapter, and it makes European barriers dramatically simpler to reason about: they're a pure function of one number, spot at maturity.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — knock-out vs. knock-in payoff, and how it's replicated</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Strike <span class="val" id="eb-k-l">1.3000</span></label><input type="range" id="eb-k" min="1.20" max="1.40" step="0.005" value="1.30"></div>
+        <div class="ctrl"><label>European barrier <span class="val" id="eb-b-l">1.4500</span></label><input type="range" id="eb-b" min="1.32" max="1.55" step="0.005" value="1.45"></div>
+        <div class="ctrl">
+          <label>Contract</label>
+          <select id="eb-mode">
+            <option value="ko">Knock-out</option>
+            <option value="ki">Knock-in</option>
+          </select>
+        </div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-eurobarrier" width="880" height="340"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--amber)"></i> Barrier option payoff</span>
+        <span><i style="background:var(--text-faint)"></i> Plain vanilla (for comparison)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">The replication trick, spelled out</div>
+    <p style="color:var(--text); margin:0;">A long European knock-out call = (long call spread struck at K and the barrier B) + (short European digital at B). The digital exactly cancels the payoff beyond the barrier, chopping the ramp into a flat line. And since a digital can itself be replicated with vanilla spreads, <b>a European barrier can theoretically be built entirely out of plain vanilla options</b> — no exotic pricing model strictly required, though in practice a smile model or tight replication is used for speed and accuracy.</p>
+  </div>
+
+  <p>One more identity worth internalizing, because it will save you from ever needing to memorize a separate knock-in formula: <b>long knock-in + long knock-out = long vanilla</b>, always, for identical contract terms. The digitals embedded in each replication are equal and opposite, and they cancel.</p>
+</section>
+
+<section class="section" id="intrinsic">
+  <div class="eyebrow"><span class="line"></span> 22.1 · Intrinsic Value</div>
+  <h2 class="title">Intrinsic value: the size of the cliff, in real money</h2>
+  <p class="subtitle">"Intrinsic value" (also called parity, cliff, or spike) measures the payoff <em>right at the barrier</em> — in other words, exactly how much P&amp;L jumps if spot ends up a single pip on one side of the barrier versus the other at maturity. It's the size of the embedded digital.</p>
+
+  <div class="formula-box">
+    <div class="cap">Intrinsic value of a European barrier</div>
+    $$IV_{CCY2} = N_{CCY1}\times|B-K| \qquad\qquad IV_{CCY1\%} = \frac{|B-K|}{B}$$
+  </div>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — calculate intrinsic value</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Notional (CCY1, m) <span class="val" id="iv-n-l">100</span></label><input type="range" id="iv-n" min="1" max="300" step="1" value="100"></div>
+        <div class="ctrl"><label>Strike <span class="val" id="iv-k-l">100.00</span></label><input type="range" id="iv-k" min="70" max="150" step="0.5" value="100"></div>
+        <div class="ctrl"><label>Barrier <span class="val" id="iv-b-l">120.00</span></label><input type="range" id="iv-b" min="70" max="150" step="0.5" value="120"></div>
+      </div>
+      <div class="readout">
+        <div class="stat"><div class="k">Intrinsic value (CCY1%)</div><div class="v" id="iv-pct">–</div></div>
+        <div class="stat"><div class="k">Intrinsic value (CCY1)</div><div class="v" id="iv-ccy1">–</div></div>
+      </div>
+      <p style="font-size:13px; margin-top:12px;">Matches the textbook example: USD/JPY, USD100m notional, 100.00 strike, 120.00 European knock-out → intrinsic value ≈ USD16.7m.</p>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">Why traders reach for this number constantly</div>
+    <p style="color:var(--text); margin:0;">Intrinsic value directly sets the <b>bid-offer spread</b> traders quote on a European barrier. Since spot can't be at both the strike <em>and</em> the barrier simultaneously at maturity, only the larger of "strike-side vanilla spread risk" and "barrier-side digital risk" typically drives the width — and the digital risk at the barrier is usually the bigger one. If your digital bid-offer runs 2%, expect the barrier's bid-offer to run roughly 2% × intrinsic value.</p>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- CHAPTER 23 — TOUCH OPTIONS -->
+<!-- ======================================================================= -->
+
+<section class="section" id="touch">
+  <div class="chapternum">23</div>
+  <div class="eyebrow"><span class="line"></span> Chapter 23 · Touch Options</div>
+  <h2 class="title">American digitals: does spot ever touch, at any moment at all?</h2>
+  <p class="subtitle">A one-touch pays a fixed cash amount if spot ever trades through a barrier <em>at any time</em> before expiry — not just at the very end. A no-touch pays if it never does. These are the American-barrier cousins of the European digitals from Chapter 21.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="font-size:15px;">One-touch (OT)</h3>
+      <p style="font-size:14px;">Pays out if spot <em>ever</em> trades through the barrier before expiry. Quoted, like a digital, as a % of the payout — because there's no strike to switch currencies against.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;">No-touch (NT)</h3>
+      <p style="font-size:14px;">Pays out only if spot <em>never</em> trades through the barrier. Its Greeks and TV adjustment are the exact mirror image (equal and opposite) of the matching one-touch.</p>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">The everyday-language definition of "touch probability"</div>
+    <p style="color:var(--text); margin:0;">Ignoring hedges and discounting, a one-touch's theoretical value <em>is</em>, intuitively, the model's estimate of the probability that spot ever reaches the barrier before expiry. That's not a metaphor — it's literally what the Monte Carlo lab below measures directly, and you can watch it converge to the model's number in real time.</p>
+  </div>
+</section>
+
+<section class="section" id="montecarlo">
+  <div class="eyebrow"><span class="line"></span> 23.1 · Monte Carlo Lab</div>
+  <h2 class="title">Watch touch probability converge, path by path</h2>
+  <p class="subtitle">This is the heart of understanding a one-touch. We'll simulate many random spot paths under the same lognormal (geometric Brownian motion) dynamic that underlies Black-Scholes, and simply <em>count</em> how many of them ever cross the barrier. As the sample size grows, that fraction converges to the closed-form touch probability.</p>
+
+  <div class="tryit" id="mc-lab">
+    <div class="tryit-head">Try it — run the simulation</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Spot <span class="val" id="mc-s-l">100.00</span></label><input type="range" id="mc-s" min="80" max="120" step="0.5" value="100"></div>
+        <div class="ctrl"><label>Barrier (upper) <span class="val" id="mc-b-l">110.00</span></label><input type="range" id="mc-b" min="100.5" max="140" step="0.5" value="110"></div>
+        <div class="ctrl"><label>Volatility σ <span class="val" id="mc-vol-l">12.0%</span></label><input type="range" id="mc-vol" min="3" max="35" step="0.5" value="12"></div>
+        <div class="ctrl"><label>Time to maturity <span class="val" id="mc-t-l">1.00 yr</span></label><input type="range" id="mc-t" min="0.1" max="2" step="0.05" value="1"></div>
+        <div class="ctrl"><label>Paths <span class="val" id="mc-n-l">60</span></label><input type="range" id="mc-n" min="10" max="300" step="10" value="60"></div>
+      </div>
+      <div class="btnrow" style="margin-bottom:10px;">
+        <button class="btn" id="mc-run">Run simulation ⟳</button>
+        <button class="btn secondary" id="mc-run-many">Run 20× faster (10,000 paths, no animation)</button>
+      </div>
+      <div class="chartwrap"><canvas id="cv-montecarlo" width="880" height="380"></canvas></div>
+      <div class="readout">
+        <div class="stat"><div class="k">Paths touched barrier</div><div class="v" id="mc-touched">–</div></div>
+        <div class="stat"><div class="k">Monte Carlo estimate</div><div class="v" id="mc-estimate">–</div></div>
+        <div class="stat"><div class="k">Closed-form touch prob.</div><div class="v" id="mc-closedform">–</div></div>
+        <div class="stat"><div class="k">One-touch TV (discounted)</div><div class="v" id="mc-tv">–</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    <div class="cap">Closed-form probability that GBM ever reaches a barrier before T (reflection principle)</div>
+    $$P(\text{touch})=N\!\left(\frac{mT-b}{\sigma\sqrt{T}}\right)+e^{\frac{2mb}{\sigma^2}}\,N\!\left(\frac{-mT-b}{\sigma\sqrt{T}}\right)$$
+    <p style="font-size:13px; color:var(--text-dim); margin:8px 0 0;">where <span class="mono">b = ln(B/S)</span> and <span class="mono">m = (r_d - r_f) - σ²/2</span> is the drift of log-spot. This is exactly the mathematics behind one-touch theoretical value — a full desk pricer additionally layers in the smile and stochastic-rate adjustments from Chapter 19.</p>
+  </div>
+
+  <div class="warn">
+    <div class="lbl">A genuinely surprising result, hiding in these sliders</div>
+    <p style="color:var(--text); margin:0;">Push CCY1 rates far above CCY2 rates (very negative swap points) with a <em>downside</em> barrier, and a long one-touch can develop <b>negative vega</b> — more volatility makes it <em>less</em> likely to trigger. Why: with a strongly negative forward drift, the model already expects the forward path to sail straight through the barrier with high probability. Adding volatility lets spot diverge <em>away</em> from that path just as easily as toward it — and since it was already expected to hit, extra randomness can only reduce the chance. Remember: zero volatility never means spot is static — it means spot exactly follows the forward.</p>
+  </div>
+</section>
+
+<section class="section" id="greeks-touch">
+  <div class="eyebrow"><span class="line"></span> 23.2 · Greeks Through Time</div>
+  <h2 class="title">Delta, vega, and gamma all migrate toward the barrier</h2>
+  <p class="subtitle">A one-touch's Greeks don't sit still — as expiry approaches, every exposure concentrates more and more tightly around the barrier level, then vanishes entirely the instant the option either triggers or expires.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — scrub through time and watch delta, vega, and gamma reshape</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Time to maturity <span class="val" id="gr-t-l">6 months</span></label><input type="range" id="gr-t" min="0.01" max="1" step="0.005" value="0.5"></div>
+        <div class="ctrl">
+          <label>Greek</label>
+          <select id="gr-which">
+            <option value="delta">Delta</option>
+            <option value="vega">Vega</option>
+            <option value="gamma">Gamma</option>
+          </select>
+        </div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-greeks" width="880" height="360"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3 style="font-size:14.5px; color:var(--teal);">Delta</h3>
+      <p style="font-size:13.5px;">Long into a topside barrier, short into a downside one — value rises as spot nears the barrier. Far from the barrier, delta bleeds <em>away</em> from it over time; close to it, delta bleeds <em>toward</em> it. On the expiry date itself the option becomes pure cash-or-nothing with <b>zero</b> delta — producing a large, sudden delta bleed on the final day.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:14.5px; color:var(--amber);">Vega</h3>
+      <p style="font-size:13.5px;">Generally long vega (more volatility → more chance of touching), peaking where the touch is most "in the balance" — around the 30% TV point — and that peak marches toward the barrier as time passes. It's exactly zero <em>through</em> the barrier itself, since the contract has already locked in its payout there.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:14.5px; color:var(--rose);">Gamma</h3>
+      <p style="font-size:13.5px;">Explodes near the barrier into the final days — mirroring the digital's pin risk from Chapter 21. The standard hedge: sell vanillas at (or just in front of) the barrier, to the same expiry, to offset the theta and gamma spike on the last few days.</p>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="lbl">The delta gap ("stop-loss order in disguise")</div>
+    <p style="color:var(--text); margin:0;">The instant a barrier actually knocks, the option's delta jumps discontinuously to zero. A long topside one-touch's delta jumps from "long" to "flat" the moment it triggers — which means the overall trading book suddenly gets shorter delta and needs spot <em>bought</em> right as spot is rallying through the level. That's a stop-loss order, generated automatically by being long the barrier. G10 desks pre-place these delta-gap orders in an order-management system so the net position doesn't jump when the barrier trips.</p>
+  </div>
+</section>
+
+<section class="section" id="dnt">
+  <div class="eyebrow"><span class="line"></span> 23.3 · Double-No-Touch</div>
+  <h2 class="title">Ranges: betting that nothing dramatic happens</h2>
+  <p class="subtitle">A double-no-touch (DNT), or "range," pays out if spot stays between two barriers for the entire life of the option. Market convention trades single barriers as one-touches, but double barriers as no-touches — so DNTs, not "double one-touches," are the standard interbank product.</p>
+
+  <div class="tryit">
+    <div class="tryit-head">Try it — build a double-no-touch and see its vega/volga signature</div>
+    <div class="tryit-body">
+      <div class="controls">
+        <div class="ctrl"><label>Lower barrier <span class="val" id="dnt-lo-l">95.00</span></label><input type="range" id="dnt-lo" min="70" max="99" step="0.5" value="95"></div>
+        <div class="ctrl"><label>Upper barrier <span class="val" id="dnt-hi-l">105.00</span></label><input type="range" id="dnt-hi" min="101" max="130" step="0.5" value="105"></div>
+      </div>
+      <div class="chartwrap"><canvas id="cv-dnt" width="880" height="360"></canvas></div>
+      <div class="legend"><span><i style="background:var(--amber)"></i> Vega across spot</span></div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="lbl">Why this is the classic "volga" trade</div>
+    <p style="color:var(--text); margin:0;">Inside the range: lower volatility means a better chance spot stays put and the payout is earned — so a long DNT is <b>short vega</b> there. Outside the range: higher volatility means a better chance spot wanders back inside — so it's <b>long vega</b> there. That "short in the middle, long in the wings" shape is exactly a long <b>volga</b> (long convexity-of-volatility) position — which is precisely why double-no-touch prices are the classic diagnostic for whether a model over- or under-values volatility convexity (recall Heston overvalues it; local vol undervalues it — Chapter 19).</p>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- RECAP -->
+<!-- ======================================================================= -->
+
+<section class="section" id="recap">
+  <div class="eyebrow"><span class="line"></span> Recap</div>
+  <h2 class="title">Flashcards — click to reveal</h2>
+  <p class="subtitle">If you can answer these without peeking, you've internalized the desk's core mental models.</p>
+
+  <div class="grid2" id="flashcards">
+    <div class="flash"><div class="q">Why does more model complexity not mean a better price?<span class="toggle">+</span></div><div class="a">Calibration takes time, and speed matters for both client quoting and portfolio risk management. Desks pick the simplest model whose dynamic matches the contract's real risk features.</div></div>
+    <div class="flash"><div class="q">What does vol-of-vol (β) control in Heston? What does correlation (ρ) control?<span class="toggle">+</span></div><div class="a">β controls the wings (convexity) of the smile. ρ controls the tilt/skew of the smile.</div></div>
+    <div class="flash"><div class="q">Which smile model overvalues volatility convexity, and which undervalues it?<span class="toggle">+</span></div><div class="a">Stochastic volatility (e.g. Heston) overvalues it. Local volatility undervalues it. Mixed volatility blends the two to match market prices, especially on convex products like double-no-touch.</div></div>
+    <div class="flash"><div class="q">What does it mean if a local volatility surface becomes undefined?<span class="toggle">+</span></div><div class="a">It signals the underlying vanilla volatility surface itself likely contains an arbitrage — a strike-spread or calendar-spread violation.</div></div>
+    <div class="flash"><div class="q">Why don't jump diffusion models work well in liquid, freely-floating pairs?<span class="toggle">+</span></div><div class="a">Real liquid markets don't move in clean discontinuous Poisson jumps. Jump models fit best in managed or pegged pairs, where spot genuinely sits still and then gaps.</div></div>
+    <div class="flash"><div class="q">What is "intrinsic value" on a European barrier option?<span class="toggle">+</span></div><div class="a">The payoff exactly at the barrier level — the size of the embedded digital, and the main driver of the barrier's bid-offer spread.</div></div>
+    <div class="flash"><div class="q">Long knock-in + long knock-out = ?<span class="toggle">+</span></div><div class="a">A long vanilla option with the same strike and expiry — the embedded digitals from each replication cancel exactly.</div></div>
+    <div class="flash"><div class="q">What's the maximum one-day theta on a European digital, and when does it occur?<span class="toggle">+</span></div><div class="a">Half the total payout, occurring on the very last trading day if spot sits near the digital level going into expiry.</div></div>
+    <div class="flash"><div class="q">Being long a barrier generates what kind of hedge order? Being short?<span class="toggle">+</span></div><div class="a">Long a barrier → a stop-loss order (buy as it rallies through / sell as it falls through). Short a barrier → a take-profit order.</div></div>
+    <div class="flash"><div class="q">Why can a one-touch have negative vega?<span class="toggle">+</span></div><div class="a">In high interest-rate-differential pairs with a barrier the forward is already expected to reach, extra volatility lets spot diverge away from that path just as easily as toward it, reducing the touch probability.</div></div>
+    <div class="flash"><div class="q">What shape is a double-no-touch's vega, and what Greek does that imply exposure to?<span class="toggle">+</span></div><div class="a">Short vega inside the range, long vega in the wings — a long volga (convexity of volatility) position.</div></div>
+    <div class="flash"><div class="q">Why are higher-generation exotics sometimes easier to risk manage than first-generation ones?<span class="toggle">+</span></div><div class="a">Features like averaging, accrual, or knockout targets smooth out the discontinuities (pin risk, gamma spikes) that make conceptually simpler first-generation products so dangerous near expiry.</div></div>
+  </div>
+</section>
+
+<div class="footer">
+  <p>Built as an interactive companion to an FX exotics desk trading manual — Chapters 19–23. Every chart is a live computation, not a static image. Reload any slider to re-derive the picture from scratch.</p>
+</div>
+
+</main>
+</div>
+
+<script>
+/* ticker tape */
+const pairs=[["EUR/USD",1.0842],["USD/JPY",148.31],["GBP/USD",1.2694],["USD/CHF",0.8823],["AUD/USD",0.6512],["USD/CNH",7.1934],["USD/BRL",5.3417],["USD/MXN",17.021]];
+let tt=document.getElementById('tickertape');
+function renderTicker(){
+  tt.innerHTML = pairs.map(([n,v])=>{
+    const jitter=(Math.random()-0.5)*0.0006*v;
+    const nv=(v+jitter).toFixed(v>50?2:4);
+    const up = jitter>=0;
+    return `<span>${n} <b style="color:${up?'#3fd6c4':'#ef6b6b'}">${nv} ${up?'▲':'▼'}</b></span>`;
+  }).join('');
+}
+renderTicker(); setInterval(renderTicker,1400);
+
+/* active nav highlight */
+const navlinks=[...document.querySelectorAll('.navlink[data-target]')];
+const targets=navlinks.map(l=>document.getElementById(l.dataset.target)).filter(Boolean);
+function onScroll(){
+  let idx=0; const y=window.scrollY+120;
+  targets.forEach((t,i)=>{ if(t && t.offsetTop<=y) idx=i; });
+  navlinks.forEach(l=>l.classList.remove('active'));
+  const activeTarget = targets[idx];
+  if(activeTarget){
+    const link = navlinks.find(l=>l.dataset.target===activeTarget.id);
+    if(link) link.classList.add('active');
+  }
+}
+window.addEventListener('scroll', onScroll); onScroll();
+
+/* KaTeX auto-render */
+if(window.renderMathInElement){
+  renderMathInElement(document.body, {
+    delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]
+  });
+}
+</script>
+
+<script>
+/* =====================================================================
+   SHARED MATH UTILITIES
+   ===================================================================== */
+function erf(x){
+  // Abramowitz-Stegun approximation
+  const sign = x<0?-1:1; x=Math.abs(x);
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const t=1/(1+p*x);
+  const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+  return sign*y;
+}
+function normCDF(x){ return 0.5*(1+erf(x/Math.SQRT2)); }
+function normPDF(x){ return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI); }
+function randn(){
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function linspace(a,b,n){ const out=[]; for(let i=0;i<n;i++) out.push(a+(b-a)*i/(n-1)); return out; }
+function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
+
+/* Black-Scholes digital call/put, CCY2%-payout */
+function d2fn(S,K,sig,T,r1,r2){ return (Math.log(S/K)+(r2-r1-0.5*sig*sig)*T)/(sig*Math.sqrt(T)); }
+function d1fn(S,K,sig,T,r1,r2){ return d2fn(S,K,sig,T,r1,r2)+sig*Math.sqrt(T); }
+function digitalCall(S,K,sig,T,r1,r2){ const d2=d2fn(S,K,sig,T,r1,r2); return Math.exp(-r2*T)*normCDF(d2); }
+function digitalPut(S,K,sig,T,r1,r2){ return Math.exp(-r2*T)-digitalCall(S,K,sig,T,r1,r2); }
+
+/* reflection-principle touch probability (upper or lower barrier, GBM log-space) */
+function touchProb(S,B,sig,T,mu){
+  // mu = drift of ln(S), e.g. (r1-r2)-0.5*sig^2 [note sign conventions handled by caller]
+  const b = Math.log(B/S); // >0 for upper barrier, <0 for lower
+  const sqT = sig*Math.sqrt(T);
+  const term1 = normCDF((mu*T-b)/sqT);
+  const term2 = Math.exp(2*mu*b/(sig*sig)) * normCDF((-mu*T-b)/sqT);
+  let p = term1+term2;
+  return clamp(p,0,1);
+}
+
+/* =====================================================================
+   TINY CANVAS PLOTTING LIBRARY
+   ===================================================================== */
+class Plot{
+  constructor(canvas, opts){
+    this.canvas = canvas; this.ctx = canvas.getContext('2d');
+    this.w = canvas.width; this.h = canvas.height;
+    this.pad = Object.assign({l:56,r:22,t:18,b:40}, opts.pad||{});
+    this.xMin=opts.xMin; this.xMax=opts.xMax; this.yMin=opts.yMin; this.yMax=opts.yMax;
+    this.xLabel=opts.xLabel||''; this.yLabel=opts.yLabel||'';
+    this.xTicks = opts.xTicks || 6; this.yTicks = opts.yTicks || 5;
+    this.xFmt = opts.xFmt || (v=>v.toFixed(2));
+    this.yFmt = opts.yFmt || (v=>v.toFixed(0));
+    this.grid = opts.grid !== false;
+  }
+  toPx(x,y){
+    const {l,r,t,b}=this.pad;
+    const px = l + (x-this.xMin)/(this.xMax-this.xMin)*(this.w-l-r);
+    const py = this.h-b - (y-this.yMin)/(this.yMax-this.yMin)*(this.h-t-b);
+    return [px,py];
+  }
+  clear(){ this.ctx.clearRect(0,0,this.w,this.h); }
+  axes(){
+    const ctx=this.ctx; const {l,r,t,b}=this.pad;
+    ctx.save();
+    ctx.strokeStyle='#1a2432'; ctx.fillStyle='#5c6b80'; ctx.font='11px IBM Plex Mono, monospace';
+    ctx.lineWidth=1;
+    if(this.grid){
+      for(let i=0;i<=this.xTicks;i++){
+        const x=this.xMin+(this.xMax-this.xMin)*i/this.xTicks;
+        const [px]=this.toPx(x,this.yMin);
+        ctx.beginPath(); ctx.moveTo(px,t); ctx.lineTo(px,this.h-b); ctx.stroke();
+        ctx.textAlign='center'; ctx.fillText(this.xFmt(x), px, this.h-b+16);
+      }
+      for(let i=0;i<=this.yTicks;i++){
+        const y=this.yMin+(this.yMax-this.yMin)*i/this.yTicks;
+        const [,py]=this.toPx(this.xMin,y);
+        ctx.beginPath(); ctx.moveTo(l,py); ctx.lineTo(this.w-r,py); ctx.stroke();
+        ctx.textAlign='right'; ctx.fillText(this.yFmt(y), l-8, py+4);
+      }
+    }
+    ctx.strokeStyle='#2c3a4d';
+    ctx.beginPath(); ctx.moveTo(l,t); ctx.lineTo(l,this.h-b); ctx.lineTo(this.w-r,this.h-b); ctx.stroke();
+    if(this.xLabel){ ctx.textAlign='center'; ctx.fillStyle='#8b96a5'; ctx.fillText(this.xLabel, (l+this.w-r)/2, this.h-4); }
+    if(this.yLabel){
+      ctx.save(); ctx.translate(14, (t+this.h-b)/2); ctx.rotate(-Math.PI/2);
+      ctx.textAlign='center'; ctx.fillStyle='#8b96a5'; ctx.fillText(this.yLabel,0,0); ctx.restore();
+    }
+    ctx.restore();
+  }
+  line(points,color,width=2,dash=[]){
+    const ctx=this.ctx; ctx.save();
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash(dash);
+    ctx.beginPath();
+    points.forEach(([x,y],i)=>{
+      if(y===null||y===undefined||isNaN(y)) return;
+      const [px,py]=this.toPx(x,clamp(y,this.yMin-1e9,this.yMax+1e9));
+      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    });
+    ctx.stroke(); ctx.restore();
+  }
+  fn(f,color,width=2,n=240,dash=[]){
+    const pts = linspace(this.xMin,this.xMax,n).map(x=>[x,f(x)]);
+    this.line(pts,color,width,dash);
+  }
+  fillBetween(pts1,pts2,color){
+    const ctx=this.ctx; ctx.save(); ctx.fillStyle=color; ctx.beginPath();
+    pts1.forEach(([x,y],i)=>{ const [px,py]=this.toPx(x,clamp(y,this.yMin,this.yMax)); i===0?ctx.moveTo(px,py):ctx.lineTo(px,py); });
+    for(let i=pts2.length-1;i>=0;i--){ const [px,py]=this.toPx(pts2[i][0],clamp(pts2[i][1],this.yMin,this.yMax)); ctx.lineTo(px,py); }
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  vline(x,color,dash=[4,3],width=1.5,label){
+    const ctx=this.ctx; const [px]=this.toPx(x,0);
+    ctx.save(); ctx.strokeStyle=color; ctx.setLineDash(dash); ctx.lineWidth=width;
+    ctx.beginPath(); ctx.moveTo(px,this.pad.t); ctx.lineTo(px,this.h-this.pad.b); ctx.stroke();
+    if(label){ ctx.setLineDash([]); ctx.fillStyle=color; ctx.font='11px IBM Plex Mono, monospace'; ctx.textAlign='center'; ctx.fillText(label,px,this.pad.t-4); }
+    ctx.restore();
+  }
+  hline(y,color,dash=[4,3],width=1.5){
+    const ctx=this.ctx; const [,py]=this.toPx(0,y);
+    ctx.save(); ctx.strokeStyle=color; ctx.setLineDash(dash); ctx.lineWidth=width;
+    ctx.beginPath(); ctx.moveTo(this.pad.l,py); ctx.lineTo(this.w-this.pad.r,py); ctx.stroke(); ctx.restore();
+  }
+  dot(x,y,color,r=4){
+    const ctx=this.ctx; const [px,py]=this.toPx(x,y);
+    ctx.save(); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(px,py,r,0,7); ctx.fill(); ctx.restore();
+  }
+  text(x,y,str,color,opts={}){
+    const ctx=this.ctx; const [px,py]=this.toPx(x,y);
+    ctx.save(); ctx.fillStyle=color; ctx.font=(opts.font||'11px IBM Plex Mono, monospace');
+    ctx.textAlign=opts.align||'left'; ctx.fillText(str,px+(opts.dx||0),py+(opts.dy||0));
+    ctx.restore();
+  }
+}
+
+const COL = { amber:'#f0a339', teal:'#3fd6c4', rose:'#ef6b6b', violet:'#a58bf0', faint:'#5c6b80', white:'#e7edf5' };
+
+function bindSlider(id, labelId, fmt, cb){
+  const el=document.getElementById(id), lb=document.getElementById(labelId);
+  function upd(){ const v=parseFloat(el.value); if(lb) lb.textContent=fmt(v); cb(v); }
+  el.addEventListener('input', upd); upd();
+}
+
+/* =====================================================================
+   19.0 — FLOW DIAGRAM (Exhibit 19.1 recreation)
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-flow'); if(!c) return; const ctx=c.getContext('2d');
+  const boxes = [
+    {x:60,y:20,w:210,h:46,label:'Vanilla Market Quotes',sub:'(ATM / risk reversals / flies)',col:COL.teal},
+    {x:60,y:110,w:210,h:46,label:'Volatility Smile',sub:'(at one tenor)',col:COL.amber},
+    {x:60,y:200,w:210,h:46,label:'Volatility Surface',sub:'(all tenors combined)',col:COL.amber},
+    {x:60,y:290,w:210,h:46,label:'Vanilla FX Contracts',sub:'priced directly',col:COL.teal},
+    {x:340,y:200,w:230,h:46,label:'Exotic Pricing Models',sub:'local / stochastic / mixed vol / jumps',col:COL.violet},
+    {x:340,y:290,w:230,h:46,label:'Exotic FX Contracts',sub:'barriers, touches, digitals…',col:COL.rose},
+    {x:640,y:110,w:220,h:46,label:'Probability Density Fn',sub:"the market's implied distribution",col:COL.faint},
+  ];
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.font='13px Space Grotesk, sans-serif';
+    function box(b){
+      ctx.fillStyle='#141d2a'; ctx.strokeStyle=b.col; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(b.x,b.y,b.w,b.h,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#e7edf5'; ctx.font='600 13px Space Grotesk, sans-serif'; ctx.textAlign='center';
+      ctx.fillText(b.label, b.x+b.w/2, b.y+20);
+      ctx.fillStyle='#8b96a5'; ctx.font='10.5px IBM Plex Mono, monospace';
+      ctx.fillText(b.sub, b.x+b.w/2, b.y+35);
+    }
+    function arrow(x1,y1,x2,y2,label){
+      ctx.strokeStyle='#3a4a60'; ctx.fillStyle='#3a4a60'; ctx.lineWidth=1.3;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1);
+      ctx.beginPath(); ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-8*Math.cos(ang-0.4), y2-8*Math.sin(ang-0.4));
+      ctx.lineTo(x2-8*Math.cos(ang+0.4), y2-8*Math.sin(ang+0.4));
+      ctx.closePath(); ctx.fill();
+      if(label){ ctx.fillStyle='#5c6b80'; ctx.font='9.5px IBM Plex Mono, monospace'; ctx.textAlign='left';
+        ctx.fillText(label, (x1+x2)/2+6, (y1+y2)/2-4); }
+    }
+    boxes.forEach(box);
+    arrow(165,66,165,108,'build');
+    arrow(165,156,165,198,'combine tenors');
+    arrow(165,246,165,288,'price');
+    arrow(270,223,338,223,'calibrate');
+    arrow(455,246,455,288,'price');
+    arrow(455,199,650,156,'equivalent PDF');
+    arrow(270,133,640,140,'equivalent PDF');
+  }
+  draw();
+})();
+
+/* =====================================================================
+   19.1 — HESTON SMILE LAB
+   ===================================================================== */
+(function(){
+  const c = document.getElementById('cv-heston'); if(!c) return;
+  const plot = new Plot(c,{xMin:85,xMax:125,yMin:6,yMax:20,xLabel:'Strike',yLabel:'Implied vol (%)',
+    xFmt:v=>v.toFixed(0), yFmt:v=>v.toFixed(0)+'%'});
+  function smile(K,atm,beta,rho){
+    const z = (K-100)/100*10; // standardized moneyness-ish
+    const wing = 0.55*beta*beta*z*z;
+    const skew = -2.6*rho*beta*z;
+    const atmLift = 0.35*beta*beta;
+    return atm+atmLift+wing+skew;
+  }
+  function draw(){
+    const atm=parseFloat(document.getElementById('hv-atm').value);
+    const beta=parseFloat(document.getElementById('hv-beta').value);
+    const rho=parseFloat(document.getElementById('hv-rho').value);
+    plot.clear(); plot.axes();
+    plot.hline(atm, '#2c3a4d',[2,3],1);
+    plot.fn(K=>smile(K,atm,beta,rho), COL.amber, 2.5);
+    plot.text(120,19,`ATM=${atm.toFixed(1)}%  β=${beta.toFixed(2)}  ρ=${rho.toFixed(2)}`,COL.faint,{align:'right'});
+  }
+  ['hv-atm','hv-beta','hv-rho'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+    document.getElementById(id+'-l').textContent = id==='hv-atm'? parseFloat(document.getElementById(id).value).toFixed(1)+'%' : parseFloat(document.getElementById(id).value).toFixed(2);
+    draw();
+  }));
+  document.getElementById('hv-preset-flat').onclick=()=>{ setv('hv-beta',0); setv('hv-rho',0); };
+  document.getElementById('hv-preset-wing').onclick=()=>{ setv('hv-beta',1.4); setv('hv-rho',0); };
+  document.getElementById('hv-preset-tilt').onclick=()=>{ setv('hv-beta',1.0); setv('hv-rho',-0.6); };
+  function setv(id,v){ const el=document.getElementById(id); el.value=v; el.dispatchEvent(new Event('input')); }
+  draw();
+})();
+
+/* =====================================================================
+   19.2 — LOCAL VOL vs IMPLIED VOL
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-localvol'); if(!c) return;
+  const plot=new Plot(c,{xMin:85,xMax:130,yMin:6,yMax:26,xLabel:'Strike',yLabel:'Volatility (%)',yFmt:v=>v.toFixed(0)+'%'});
+  let mode='jpy';
+  function impliedVol(K,mode){
+    const z=(K-105)/105*10;
+    if(mode==='jpy') return 10.5 - 0.55*z + 0.09*z*z;
+    return 14 + 1.3*z + 0.12*z*z; // brl-style large topside skew
+  }
+  function localVol(K,mode){
+    const iv=impliedVol(K,mode);
+    const z=(K-105)/105*10;
+    const slope = mode==='jpy'? (-0.55+0.18*z) : (1.3+0.24*z);
+    return iv + slope*2.0; // roughly double the slope, Dupire-style steepening
+  }
+  function draw(){
+    plot.clear(); plot.axes();
+    plot.fn(K=>impliedVol(K,mode), COL.teal, 2.5);
+    plot.fn(K=>localVol(K,mode), COL.amber, 2.5);
+  }
+  document.getElementById('lv-jpy').onclick=()=>{mode='jpy';draw();
+    document.getElementById('lv-jpy').classList.remove('secondary'); document.getElementById('lv-brl').classList.add('secondary');};
+  document.getElementById('lv-brl').onclick=()=>{mode='brl';draw();
+    document.getElementById('lv-brl').classList.remove('secondary'); document.getElementById('lv-jpy').classList.add('secondary');};
+  draw();
+})();
+
+/* =====================================================================
+   19.3 — MIXED VOL INTERPOLATION
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-mixedvol'); if(!c) return;
+  const plot=new Plot(c,{xMin:85,xMax:125,yMin:6,yMax:20,xLabel:'Strike',yLabel:'Implied vol (%)',yFmt:v=>v.toFixed(0)+'%'});
+  function localSmile(K){ const z=(K-100)/100*10; return 10 + 0.12*z*z - 0.4*z; }
+  function stochSmile(K){ const z=(K-100)/100*10; return 10.5 + 0.55*z*z - 1.2*z; }
+  function draw(){
+    const w=parseFloat(document.getElementById('mv-w').value)/100;
+    plot.clear(); plot.axes();
+    plot.fn(localSmile, COL.teal, 1.5,240,[3,3]);
+    plot.fn(stochSmile, COL.violet, 1.5,240,[3,3]);
+    plot.fn(K=>(1-w)*localSmile(K)+w*stochSmile(K), COL.amber, 3);
+  }
+  bindSlider('mv-w','mv-w-l',v=>v.toFixed(0)+'%',draw);
+  draw();
+})();
+
+/* =====================================================================
+   19.4 — JUMP DIFFUSION SIMULATOR
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-jump'); if(!c) return;
+  let path=[]; let animFrame=0; let animId=null;
+  function simulate(){
+    const sig=parseFloat(document.getElementById('jp-sig').value)/100;
+    const lam=parseFloat(document.getElementById('jp-lam').value);
+    const jsz=parseFloat(document.getElementById('jp-jsz').value)/100;
+    const nSteps=250, T=1, dt=T/nSteps;
+    let S=100; const pts=[[0,100]]; let jumps=0, maxJump=0;
+    for(let i=1;i<=nSteps;i++){
+      S *= Math.exp(-0.5*sig*sig*dt + sig*Math.sqrt(dt)*randn());
+      if(Math.random() < lam*dt*40){ // scaled so lam roughly = jumps/yr given 40x oversampling factor cancels via dt*nSteps=1
+        const jump = Math.exp(jsz*randn());
+        S *= jump;
+        jumps++;
+        maxJump = Math.max(maxJump, Math.abs(jump-1)*100);
+      }
+      pts.push([i/nSteps*T*250, S]); // x-axis in "days" 0..250
+    }
+    path = pts;
+    document.getElementById('jp-count').textContent = jumps;
+    document.getElementById('jp-terminal').textContent = S.toFixed(2);
+    document.getElementById('jp-maxjump').textContent = jumps? maxJump.toFixed(1)+'%' : '—';
+  }
+  function render(upTo){
+    const plot=new Plot(c,{xMin:0,xMax:250,yMin:30,yMax:100+ (Math.max(...path.map(p=>p[1]))-70>30?Math.max(...path.map(p=>p[1]))-70:30) ,xLabel:'Time (trading days)',yLabel:'Spot',yFmt:v=>v.toFixed(0)});
+    // dynamic y-range based on full path
+    const ys = path.map(p=>p[1]);
+    plot.yMin = Math.max(10, Math.min(...ys)-8);
+    plot.yMax = Math.max(...ys)+8;
+    plot.clear(); plot.axes();
+    plot.line(path.slice(0,upTo), COL.amber, 2);
+  }
+  function animate(){
+    let i=2;
+    if(animId) cancelAnimationFrame(animId);
+    const anim = document.getElementById('jp-anim').checked;
+    if(!anim){ render(path.length); return; }
+    function step(){
+      i += 6;
+      render(Math.min(i,path.length));
+      if(i<path.length) animId=requestAnimationFrame(step);
+    }
+    step();
+  }
+  document.getElementById('jp-run').onclick=()=>{ simulate(); animate(); };
+  ['jp-sig','jp-lam','jp-jsz'].forEach(id=>{
+    document.getElementById(id).addEventListener('input',e=>{
+      document.getElementById(id+'-l').textContent = id==='jp-lam'? parseFloat(e.target.value).toFixed(1) : parseFloat(e.target.value).toFixed(0)+'%';
+    });
+  });
+  simulate(); render(path.length);
+})();
+
+/* =====================================================================
+   20.1 — BARRIER ZOO CLASSIFIER
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-barrierzoo'); if(!c) return;
+  const S=1.30;
+  function classify(type,dir,K,B){
+    const call = type==='call';
+    const otmSide = call ? (B<K) : (B>K); // barrier on OTM side of payoff?
+    let name;
+    if(Math.abs(B-K)<0.003){ name = dir==='out' ? 'Strike-out' : 'Strike-in'; }
+    else if(otmSide){ name = (dir==='out'?'Regular Knock-Out':'Regular Knock-In'); }
+    else {
+      const spotBeyond = call ? (S>B) : (S<B);
+      if(spotBeyond) name = 'In-The-Money (ITM) Barrier';
+      else name = (dir==='out'?'Reverse Knock-Out':'Reverse Knock-In');
+    }
+    return name;
+  }
+  function draw(){
+    const type=document.getElementById('bz-type').value;
+    const dir=document.getElementById('bz-dir').value;
+    const K=parseFloat(document.getElementById('bz-k').value);
+    const B=parseFloat(document.getElementById('bz-b').value);
+    document.getElementById('bz-k-l').textContent=K.toFixed(4);
+    document.getElementById('bz-b-l').textContent=B.toFixed(4);
+    const call = type==='call';
+    const plot=new Plot(c,{xMin:1.15,xMax:1.45,yMin:0,yMax:0.20,xLabel:'Spot at maturity',yLabel:'Payoff',yFmt:v=>v.toFixed(2)});
+    plot.clear(); plot.axes();
+    // vanilla payoff reference
+    const vpts = linspace(1.15,1.45,200).map(x=> [x, call? Math.max(0,x-K) : Math.max(0,K-x)] );
+    plot.line(vpts, '#3a4a60',1.5,[3,3]);
+    // barrier payoff
+    const otmSide = call ? (B<K) : (B>K);
+    let pts;
+    if(dir==='out'){
+      pts = linspace(1.15,1.45,200).map(x=>{
+        const alive = call ? x<B : x>B;
+        const v = call?Math.max(0,x-K):Math.max(0,K-x);
+        return [x, alive? v : (otmSide?0:v)]; // approx: for regular KO OTM side beyond barrier =>0; reverse still shows cliff at B conceptually
+      });
+      // proper regular/reverse rendering:
+      pts = linspace(1.15,1.45,200).map(x=>{
+        let beyond = call? x> B : x< B;
+        if(otmSide){ // barrier below strike (for call): beyond means knocked out region is x<B... handle directionally
+        }
+        return [x,0];
+      });
+      // simplified explicit construction:
+      pts = [];
+      for(const x of linspace(1.15,1.45,220)){
+        let knocked;
+        if(call) knocked = otmSide ? (x<=B) : (x>=B); // regular: OTM barrier below K -> knock when spot falls below B; reverse: ITM barrier above K -> knock when spot rises above B
+        else knocked = otmSide ? (x>=B) : (x<=B);
+        const v = call?Math.max(0,x-K):Math.max(0,K-x);
+        pts.push([x, knocked?0:v]);
+      }
+    } else {
+      pts=[];
+      for(const x of linspace(1.15,1.45,220)){
+        let knocked;
+        if(call) knocked = otmSide ? (x<=B) : (x>=B);
+        else knocked = otmSide ? (x>=B) : (x<=B);
+        const v = call?Math.max(0,x-K):Math.max(0,K-x);
+        pts.push([x, knocked?v:0]);
+      }
+    }
+    plot.fillBetween(pts, pts.map(p=>[p[0],0]), 'rgba(240,163,57,0.12)');
+    plot.line(pts, COL.amber, 2.5);
+    plot.vline(K, COL.teal, [2,2], 1.3, 'K');
+    plot.vline(B, COL.rose, [2,2], 1.3, 'B');
+    document.getElementById('bz-class').textContent = classify(type,dir,K,B);
+  }
+  ['bz-type','bz-dir','bz-k','bz-b'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+  draw();
+})();
+
+/* =====================================================================
+   21.0 — DIGITAL PAYOFF
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-digital-payoff'); if(!c) return;
+  const plot=new Plot(c,{xMin:90,xMax:110,yMin:-0.1,yMax:1.15,xLabel:'Spot at maturity',yLabel:'Payoff (% of notional)',yFmt:v=>(v*100).toFixed(0)+'%'});
+  plot.clear(); plot.axes();
+  const pts = linspace(90,110,400).map(x=>[x, x>=100?1:0]);
+  plot.fillBetween(pts,pts.map(p=>[p[0],0]),'rgba(240,163,57,0.10)');
+  plot.line(pts,COL.amber,2.5);
+  plot.vline(100,COL.teal,[3,3],1.3,'100.00');
+  plot.text(102,1.05,'Payout: USD 1,000,000',COL.text,{align:'left'});
+})();
+
+/* =====================================================================
+   21.1 — REPLICATION
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-replication'); if(!c) return;
+  const plot=new Plot(c,{xMin:1.35,xMax:1.45,yMin:-0.15,yMax:1.15,xLabel:'Spot at maturity',yLabel:'Payoff (% of notional)',yFmt:v=>(v*100).toFixed(0)+'%'});
+  const digitalK=1.40, payout=1000000;
+  function draw(){
+    const wPips=parseFloat(document.getElementById('rep-w').value);
+    const w = wPips/10000;
+    const K1=digitalK-w/2, K2=digitalK+w/2;
+    const notional = payout/(K2-K1);
+    plot.clear(); plot.axes();
+    const digitalPts = linspace(1.35,1.45,300).map(x=>[x, x>=digitalK?1:0]);
+    plot.line(digitalPts,'#3a4a60',1.5,[3,3]);
+    const spreadPts = linspace(1.35,1.45,300).map(x=>{
+      const v = clamp((x-K1)/(K2-K1),0,1);
+      return [x,v];
+    });
+    plot.fillBetween(spreadPts,spreadPts.map(p=>[p[0],0]),'rgba(240,163,57,0.10)');
+    plot.line(spreadPts,COL.amber,2.5);
+    plot.vline(K1,COL.teal,[2,2],1.2,'K₁ long');
+    plot.vline(K2,COL.rose,[2,2],1.2,'K₂ short');
+    document.getElementById('rep-k1').textContent = K1.toFixed(4);
+    document.getElementById('rep-k2').textContent = K2.toFixed(4);
+    document.getElementById('rep-notional').textContent = 'EUR '+(notional/1e6).toFixed(2)+'m';
+  }
+  bindSlider('rep-w','rep-w-l',v=>v.toFixed(1)+' pips',draw);
+})();
+
+/* =====================================================================
+   21.2 — LIVE BS DIGITAL PRICER
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-bs-curve'); if(!c) return;
+  function getInputs(){
+    return {
+      S: parseFloat(document.getElementById('bs-s').value),
+      K: parseFloat(document.getElementById('bs-k').value),
+      sig: parseFloat(document.getElementById('bs-vol').value)/100,
+      T: parseFloat(document.getElementById('bs-t').value),
+      r1: parseFloat(document.getElementById('bs-r1').value)/100,
+      r2: parseFloat(document.getElementById('bs-r2').value)/100,
+    };
+  }
+  function draw(){
+    const {S,K,sig,T,r1,r2} = getInputs();
+    document.getElementById('bs-s-l').textContent=S.toFixed(4);
+    document.getElementById('bs-k-l').textContent=K.toFixed(4);
+    document.getElementById('bs-vol-l').textContent=(sig*100).toFixed(1)+'%';
+    document.getElementById('bs-t-l').textContent=T.toFixed(2)+' yr';
+    document.getElementById('bs-r1-l').textContent=(r1*100).toFixed(2)+'%';
+    document.getElementById('bs-r2-l').textContent=(r2*100).toFixed(2)+'%';
+
+    const call = digitalCall(S,K,sig,T,r1,r2);
+    const put = digitalPut(S,K,sig,T,r1,r2);
+    const d2 = d2fn(S,K,sig,T,r1,r2);
+    document.getElementById('bs-call').textContent=(call*100).toFixed(2)+'%';
+    document.getElementById('bs-put').textContent=(put*100).toFixed(2)+'%';
+    document.getElementById('bs-sum').textContent=((call+put)*100).toFixed(2)+'%';
+    document.getElementById('bs-d2').textContent=d2.toFixed(3);
+
+    const plot=new Plot(c,{xMin:K*0.8,xMax:K*1.2,yMin:0,yMax:1,xLabel:'Spot',yLabel:'Digital call value',yFmt:v=>(v*100).toFixed(0)+'%'});
+    plot.clear(); plot.axes();
+    plot.fn(x=>digitalCall(x,K,sig,T,r1,r2), COL.amber, 2.5);
+    plot.vline(K,COL.teal,[3,3],1.2,'K');
+    plot.dot(S, call, COL.rose, 5);
+  }
+  ['bs-s','bs-k','bs-vol','bs-t','bs-r1','bs-r2'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+  draw();
+})();
+
+/* =====================================================================
+   21.3 — PIN RISK / GAMMA OVER TIME
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-pinrisk'); if(!c) return;
+  function draw(){
+    const T=parseFloat(document.getElementById('pr-t').value);
+    const months = T*12;
+    document.getElementById('pr-t-l').textContent = months<1? Math.round(T*365)+' days' : months.toFixed(1)+' months';
+    const K=100, sig=0.10, r1=0.02, r2=0.01;
+    const plot=new Plot(c,{xMin:92,xMax:108,yMin:0,yMax:1,xLabel:'Spot',yLabel:'Digital call value',yFmt:v=>(v*100).toFixed(0)+'%'});
+    plot.clear(); plot.axes();
+    // reference: 1 month curve faint
+    plot.fn(x=>digitalCall(x,K,sig,1/12,r1,r2), '#2c3a4d', 1.5,240,[3,3]);
+    plot.fn(x=>digitalCall(x,K,sig,Math.max(T,0.0015),r1,r2), COL.amber, 2.5);
+    plot.vline(K,COL.teal,[3,3],1.2,'100.00');
+  }
+  bindSlider('pr-t','pr-t-l',v=>'',draw);
+  draw();
+})();
+
+/* =====================================================================
+   22.0 — EUROPEAN BARRIER PAYOFF
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-eurobarrier'); if(!c) return;
+  function draw(){
+    const K=parseFloat(document.getElementById('eb-k').value);
+    const B=parseFloat(document.getElementById('eb-b').value);
+    const mode=document.getElementById('eb-mode').value;
+    document.getElementById('eb-k-l').textContent=K.toFixed(4);
+    document.getElementById('eb-b-l').textContent=B.toFixed(4);
+    const plot=new Plot(c,{xMin:1.18,xMax:1.60,yMin:0,yMax:0.32,xLabel:'Spot at maturity',yLabel:'Payoff',yFmt:v=>v.toFixed(2)});
+    plot.clear(); plot.axes();
+    const vpts = linspace(1.18,1.60,300).map(x=>[x,Math.max(0,x-K)]);
+    plot.line(vpts,'#3a4a60',1.5,[3,3]);
+    let pts;
+    if(mode==='ko'){
+      pts = linspace(1.18,1.60,300).map(x=>[x, x<B? Math.max(0,x-K):0]);
+    } else {
+      pts = linspace(1.18,1.60,300).map(x=>[x, x>=B? Math.max(0,x-K):0]);
+    }
+    plot.fillBetween(pts,pts.map(p=>[p[0],0]),'rgba(240,163,57,0.12)');
+    plot.line(pts,COL.amber,2.5);
+    plot.vline(K,COL.teal,[2,2],1.2,'K');
+    plot.vline(B,COL.rose,[2,2],1.2,'B');
+  }
+  ['eb-k','eb-b','eb-mode'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+  draw();
+})();
+
+/* =====================================================================
+   22.1 — INTRINSIC VALUE CALC
+   ===================================================================== */
+(function(){
+  const el=document.getElementById('iv-n'); if(!el) return;
+  function draw(){
+    const N=parseFloat(document.getElementById('iv-n').value);
+    const K=parseFloat(document.getElementById('iv-k').value);
+    const B=parseFloat(document.getElementById('iv-b').value);
+    document.getElementById('iv-n-l').textContent=N.toFixed(0);
+    document.getElementById('iv-k-l').textContent=K.toFixed(2);
+    document.getElementById('iv-b-l').textContent=B.toFixed(2);
+    const pct = Math.abs(B-K)/B;
+    const ccy1 = N*pct;
+    document.getElementById('iv-pct').textContent=(pct*100).toFixed(1)+'%';
+    document.getElementById('iv-ccy1').textContent=ccy1.toFixed(1)+'m';
+  }
+  ['iv-n','iv-k','iv-b'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+  draw();
+})();
+
+/* =====================================================================
+   23.1 — MONTE CARLO TOUCH LAB
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-montecarlo'); if(!c) return;
+  let paths=[]; let touchedCount=0; let animId=null;
+
+  function genPaths(n, S0,B,sig,T){
+    const nSteps=120, dt=T/nSteps;
+    const mu = -0.5*sig*sig; // zero-rate-differential drift assumption for the lab
+    const out=[];
+    let touched=0;
+    for(let p=0;p<n;p++){
+      let S=S0; let didTouch=false; const pts=[[0,S]];
+      for(let i=1;i<=nSteps;i++){
+        S *= Math.exp(mu*dt + sig*Math.sqrt(dt)*randn());
+        if(S>=B) didTouch=true;
+        pts.push([i/nSteps*T, S]);
+      }
+      if(didTouch) touched++;
+      out.push({pts, touched:didTouch});
+    }
+    return {paths:out, touched};
+  }
+
+  function drawStatic(pathset, upToFrac, S0,B,T){
+    const allY = pathset.flatMap(p=>p.pts.map(pt=>pt[1]));
+    const plot=new Plot(c,{xMin:0,xMax:T,yMin:Math.min(...allY,S0)*0.9,yMax:Math.max(...allY,B)*1.05,
+      xLabel:'Time (years)',yLabel:'Spot',yFmt:v=>v.toFixed(0)});
+    plot.clear(); plot.axes();
+    plot.hline(B, COL.rose, [4,3], 1.6);
+    plot.text(T*0.02, B, 'Barrier', COL.rose, {dy:-6});
+    plot.hline(S0, '#2c3a4d', [2,2], 1);
+    pathset.forEach(p=>{
+      const cut = Math.max(2,Math.floor(p.pts.length*upToFrac));
+      const seg = p.pts.slice(0,cut);
+      plot.line(seg, p.touched? 'rgba(240,163,57,0.85)' : 'rgba(63,214,196,0.28)', p.touched?1.6:1);
+    });
+  }
+
+  function run(animated){
+    const S0=parseFloat(document.getElementById('mc-s').value);
+    const B=parseFloat(document.getElementById('mc-b').value);
+    const sig=parseFloat(document.getElementById('mc-vol').value)/100;
+    const T=parseFloat(document.getElementById('mc-t').value);
+    const n=parseInt(document.getElementById('mc-n').value);
+
+    const {paths:pset, touched} = genPaths(n,S0,B,sig,T);
+    paths = pset; touchedCount = touched;
+
+    const est = touched/n;
+    const mu = -0.5*sig*sig;
+    const closed = touchProb(S0,B,sig,T,mu);
+    const tv = closed*Math.exp(-0.01*T);
+
+    document.getElementById('mc-touched').textContent = `${touched} / ${n}`;
+    document.getElementById('mc-estimate').textContent = (est*100).toFixed(1)+'%';
+    document.getElementById('mc-closedform').textContent = (closed*100).toFixed(1)+'%';
+    document.getElementById('mc-tv').textContent = (tv*100).toFixed(1)+'%';
+
+    if(animId) cancelAnimationFrame(animId);
+    if(!animated){ drawStatic(paths,1,S0,B,T); return; }
+    let f=0;
+    function step(){
+      f += 0.03;
+      drawStatic(paths, Math.min(f,1), S0,B,T);
+      if(f<1) animId=requestAnimationFrame(step);
+    }
+    step();
+  }
+
+  function runMany(){
+    const S0=parseFloat(document.getElementById('mc-s').value);
+    const B=parseFloat(document.getElementById('mc-b').value);
+    const sig=parseFloat(document.getElementById('mc-vol').value)/100;
+    const T=parseFloat(document.getElementById('mc-t').value);
+    const {touched} = genPaths(10000,S0,B,sig,T);
+    const est = touched/10000;
+    const mu=-0.5*sig*sig;
+    const closed = touchProb(S0,B,sig,T,mu);
+    document.getElementById('mc-touched').textContent = `${touched} / 10,000`;
+    document.getElementById('mc-estimate').textContent = (est*100).toFixed(2)+'%';
+    document.getElementById('mc-closedform').textContent = (closed*100).toFixed(2)+'%';
+    document.getElementById('mc-tv').textContent = (closed*Math.exp(-0.01*T)*100).toFixed(2)+'%';
+  }
+
+  ['mc-s','mc-b','mc-vol','mc-t','mc-n'].forEach(id=>{
+    document.getElementById(id).addEventListener('input',e=>{
+      const v=parseFloat(e.target.value);
+      const map={'mc-s':v.toFixed(2),'mc-b':v.toFixed(2),'mc-vol':v.toFixed(1)+'%','mc-t':v.toFixed(2)+' yr','mc-n':v.toFixed(0)};
+      document.getElementById(id+'-l').textContent = map[id];
+    });
+  });
+  document.getElementById('mc-run').onclick=()=>run(true);
+  document.getElementById('mc-run-many').onclick=runMany;
+  run(false);
+})();
+
+/* =====================================================================
+   23.2 — GREEKS THROUGH TIME
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-greeks'); if(!c) return;
+  const B=100, sig=0.11, r1=0.02, r2=0.01;
+  function otPrice(S,T){ // one-touch (upper barrier) approx price via reflection formula, CCY1%
+    const mu = (r1-r2)-0.5*sig*sig;
+    return touchProb(S,B,sig,Math.max(T,0.0008),mu)*Math.exp(-r2*T);
+  }
+  function draw(){
+    const T=parseFloat(document.getElementById('gr-t').value);
+    const months=T*12;
+    document.getElementById('gr-t-l').textContent = months<1? Math.round(T*365)+' days':months.toFixed(1)+' months';
+    const which=document.getElementById('gr-which').value;
+    const h=0.05;
+    function delta(S){ return (otPrice(S+h,T)-otPrice(S-h,T))/(2*h); }
+    function gamma(S){ return (otPrice(S+h,T)-2*otPrice(S,T)+otPrice(S-h,T))/(h*h); }
+    function vega(S){ const dv=0.001; const up=touchProb(S,B,sig+dv,Math.max(T,0.0008),(r1-r2)-0.5*(sig+dv)*(sig+dv))*Math.exp(-r2*T);
+      const dn=touchProb(S,B,sig-dv,Math.max(T,0.0008),(r1-r2)-0.5*(sig-dv)*(sig-dv))*Math.exp(-r2*T);
+      return (up-dn)/(2*dv)*0.01; }
+    let plot, fn, color, ylab;
+    if(which==='delta'){ fn=delta; color=COL.teal; ylab='Delta'; plot=new Plot(c,{xMin:80,xMax:105,yMin:-0.02,yMax:0.5,xLabel:'Spot',yLabel:ylab,yFmt:v=>v.toFixed(2)}); }
+    else if(which==='vega'){ fn=vega; color=COL.amber; ylab='Vega'; plot=new Plot(c,{xMin:80,xMax:105,yMin:-0.05,yMax:0.3,xLabel:'Spot',yLabel:ylab,yFmt:v=>v.toFixed(2)}); }
+    else { fn=gamma; color=COL.rose; ylab='Gamma'; plot=new Plot(c,{xMin:80,xMax:105,yMin:-0.2,yMax:6,xLabel:'Spot',yLabel:ylab,yFmt:v=>v.toFixed(1)}); }
+    plot.clear(); plot.axes();
+    plot.vline(B,COL.rose,[3,3],1.2,'Barrier');
+    plot.fn(fn,color,2.5,180);
+  }
+  document.getElementById('gr-t').addEventListener('input',draw);
+  document.getElementById('gr-which').addEventListener('input',draw);
+  draw();
+})();
+
+/* =====================================================================
+   23.3 — DOUBLE-NO-TOUCH VEGA PROFILE
+   ===================================================================== */
+(function(){
+  const c=document.getElementById('cv-dnt'); if(!c) return;
+  const sig=0.11,T=0.5,r1=0.02,r2=0.01;
+  function dntPrice(S,lo,hi,vol){
+    const mu = (r1-r2)-0.5*vol*vol;
+    const pUp = touchProb(S,hi,vol,T,mu);
+    const pDn = touchProb(S,lo,vol,T,-((r1-r2)-0.5*vol*vol)); // reuse reflection for lower barrier by symmetry
+    // crude but pedagogically consistent: prob no-touch-either ~ 1 - pUp - pDn (bounded)
+    const noTouch = clamp(1-pUp-pDn,0,1);
+    return noTouch*Math.exp(-r2*T);
+  }
+  function draw(){
+    const lo=parseFloat(document.getElementById('dnt-lo').value);
+    const hi=parseFloat(document.getElementById('dnt-hi').value);
+    document.getElementById('dnt-lo-l').textContent=lo.toFixed(2);
+    document.getElementById('dnt-hi-l').textContent=hi.toFixed(2);
+    const dv=0.005;
+    function vega(S){
+      const up=dntPrice(S,lo,hi,sig+dv), dn=dntPrice(S,lo,hi,sig-dv);
+      return (up-dn)/(2*dv)*0.01;
+    }
+    const plot=new Plot(c,{xMin:Math.min(70,lo-15),xMax:Math.max(130,hi+15),yMin:-0.08,yMax:0.02,xLabel:'Spot',yLabel:'Vega',yFmt:v=>v.toFixed(2)});
+    plot.clear(); plot.axes();
+    plot.vline(lo,COL.teal,[3,3],1.2,'Lower B');
+    plot.vline(hi,COL.teal,[3,3],1.2,'Upper B');
+    plot.fn(vega,COL.amber,2.5,200);
+  }
+  ['dnt-lo','dnt-hi'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+  draw();
+})();
+
+/* =====================================================================
+   FLASHCARDS
+   ===================================================================== */
+document.querySelectorAll('.flash').forEach(f=>{
+  f.addEventListener('click',()=>{
+    const open=f.classList.contains('open');
+    f.classList.toggle('open');
+    f.querySelector('.toggle').textContent = open? '+' : '–';
+  });
+});
+</script>
+
+</body>
+</html>

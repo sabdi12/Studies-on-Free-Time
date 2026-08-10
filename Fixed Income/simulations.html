@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Delta vs Local Volatility</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .value-display {
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #667eea;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .info-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-box {
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+
+        .delta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .delta-table th,
+        .delta-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .delta-table th {
+            background: #f0f0f0;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .delta-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .sticky-delta {
+            background: #c8e6c9;
+        }
+
+        .local-vol {
+            background: #ffccbc;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-columns {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Sticky Delta vs Local Volatility</h1>
+        <p class="subtitle">Understanding Volatility Smile Behavior Under Spot Price Changes</p>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                <label class="control-label">Initial Spot Price: $100</label>
+                <div class="slider-container">
+                    <input type="range" id="spotSlider" min="80" max="120" value="100" step="1">
+                    <span class="value-display" id="spotValue">100</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Realized Volatility Level: 0%</label>
+                <div class="slider-container">
+                    <input type="range" id="volSlider" min="0" max="80" value="30" step="1">
+                    <span class="value-display" id="volValue">30%</span>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="startAnimation()">▶️ Animate Spot Movement</button>
+                <button class="btn" onclick="resetSimulation()">🔄 Reset</button>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">Sticky Delta: Pure Stochastic Volatility</div>
+                <div class="chart-wrapper">
+                    <canvas id="stickyDeltaChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #667eea; width: 20px;"></div>
+                        <span>Initial Smile</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff7043; width: 20px;"></div>
+                        <span>Smile at New Spot</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Local Volatility: Price-Level Dependence</div>
+                <div class="chart-wrapper">
+                    <canvas id="localVolChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ab47bc; width: 20px;"></div>
+                        <span>Initial Smile</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #26a69a; width: 20px;"></div>
+                        <span>Smile at New Spot</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-columns">
+                <div class="info-box sticky-delta">
+                    <h3>📍 Sticky Delta (Stochastic Vol)</h3>
+                    <p><strong>Key Principle:</strong> The smile is anchored to delta (moneyness), not absolute price levels.</p>
+                    <p style="margin-top: 10px;"><strong>When Spot Moves:</strong> The entire volatility curve shifts to remain centered on the new spot in delta space.</p>
+                    <p style="margin-top: 10px;"><strong>Quote Stability:</strong> The implied volatility for "25-delta call" remains roughly constant because delta automatically recalibrates to the new spot.</p>
+                    <p style="margin-top: 10px;"><strong>Model Logic:</strong> Volatility is pure randomness layered on top—independent of spot level.</p>
+                </div>
+
+                <div class="info-box local-vol">
+                    <h3>🎯 Local Volatility: Price-Level Dependent</h3>
+                    <p><strong>Key Principle:</strong> Volatility is tied to specific price levels, not to relative moneyness.</p>
+                    <p style="margin-top: 10px;"><strong>When Spot Moves:</strong> The smile stays anchored to fixed price levels. What was the ATM strikes changes.</p>
+                    <p style="margin-top: 10px;"><strong>Quote Behavior:</strong> The implied volatility for a fixed strike (say $105 call) remains similar, creating a "sticky strike" effect.</p>
+                    <p style="margin-top: 10px;"><strong>Model Logic:</strong> Volatility depends on the current state—σ(S, t)—creating state-dependent risk.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3 style="margin-bottom: 15px; color: #667eea;">📊 Volatility Quotes Comparison at Different Spots</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Delta Level</th>
+                        <th>Sticky Delta (Stoch Vol)<br/>Spot at 100</th>
+                        <th>Sticky Delta (Stoch Vol)<br/>Spot at 110</th>
+                        <th>Local Vol<br/>Spot at 100</th>
+                        <th>Local Vol<br/>Spot at 110</th>
+                    </tr>
+                </thead>
+                <tbody id="comparisonTableBody">
+                </tbody>
+            </table>
+            <div class="note">
+                <strong>💡 Key Insight:</strong> In sticky delta, the 25-delta call quote changes little when spot moves (comparing column 2 to 3). 
+                In local volatility, the same strike quote stays similar, but the delta changes significantly (comparing column 4 to 5).
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3 style="margin-bottom: 15px; color: #667eea;">🧠 Understanding the Mechanics</h3>
+            <div class="note">
+                <strong>Pure Stochastic Volatility:</strong>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li>The model specifies: dS = μS dt + σ_t S dW_S, where σ_t follows its own process</li>
+                    <li>Volatility is orthogonal to spot level—it doesn't depend on where you are in price space</li>
+                    <li>The smile shape is <em>purely</em> a result of volatility randomness, not spot dependency</li>
+                    <li>As spot drifts, the smile "walks" with it in delta space—same relative positioning</li>
+                    <li><strong>Result:</strong> Sticky delta—moneyness-based quotes stay stable</li>
+                </ul>
+            </div>
+            <div class="note" style="margin-top: 15px;">
+                <strong>Local Volatility:</strong>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li>The model specifies: dS = μS dt + σ(S,t) S dW, where vol is deterministic and state-dependent</li>
+                    <li>Different price levels have different volatilities built into the model</li>
+                    <li>The smile is <em>locked to the price axis</em>, not to relative moneyness</li>
+                    <li>As spot moves, the ATM point moves, but strikes remain fixed—changing their moneyness</li>
+                    <li><strong>Result:</strong> Sticky strike—absolute price level quotes stay more stable</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stickyDeltaChart, localVolChart;
+        let currentSpot = 100;
+        let initialSpot = 100;
+        let currentVol = 0.30;
+        let animationRunning = false;
+
+        // Initialize charts
+        function initCharts() {
+            updateCharts();
+            updateComparisonTable();
+        }
+
+        // Generate volatility smile for stochastic volatility (sticky delta)
+        function generateStickyDeltaSmile(spot) {
+            const deltas = [0.1, 0.15, 0.25, 0.50, 0.75, 0.85, 0.90];
+            const baseVol = currentVol;
+            const smile = [];
+
+            for (let delta of deltas) {
+                // ATM (delta 0.5) has lowest vol
+                const moneyness = Math.log(delta / (1 - delta));
+                const smileAdjustment = 0.02 * Math.pow(moneyness, 2);
+                smile.push(baseVol + smileAdjustment);
+            }
+
+            return { deltas, vols: smile };
+        }
+
+        // Generate volatility smile for local volatility (sticky strike)
+        function generateLocalVolSmile(currentSpot, referencedSpot = 100) {
+            const strikes = [80, 85, 90, 95, 100, 105, 110, 115, 120];
+            const baseVol = currentVol;
+            const smile = [];
+
+            for (let strike of strikes) {
+                // Smile is tied to fixed strikes, not to delta
+                const moneyness = Math.log(strike / referencedSpot);
+                const smileAdjustment = 0.02 * Math.pow(moneyness, 2);
+                smile.push(baseVol + smileAdjustment);
+            }
+
+            return { strikes, vols: smile };
+        }
+
+        function updateCharts() {
+            const stickyData = generateStickyDeltaSmile(currentSpot);
+            const localData = generateLocalVolSmile(currentSpot);
+            const localDataInitial = generateLocalVolSmile(100, 100);
+
+            // Update Sticky Delta Chart
+            if (stickyDeltaChart) {
+                stickyDeltaChart.data.labels = stickyData.deltas.map(d => `${Math.round(d*100)}%`);
+                stickyDeltaChart.data.datasets[0].data = generateStickyDeltaSmile(initialSpot).vols.map(v => (v*100).toFixed(1));
+                stickyDeltaChart.data.datasets[1].data = stickyData.vols.map(v => (v*100).toFixed(1));
+                stickyDeltaChart.update('none');
+            }
+
+            // Update Local Vol Chart
+            if (localVolChart) {
+                localVolChart.data.labels = localData.strikes;
+                localVolChart.data.datasets[0].data = localDataInitial.vols.map(v => (v*100).toFixed(1));
+                localVolChart.data.datasets[1].data = localData.vols.map(v => (v*100).toFixed(1));
+                localVolChart.update('none');
+            }
+        }
+
+        function updateComparisonTable() {
+            const deltas = [0.25, 0.50, 0.75];
+            const tbody = document.getElementById('comparisonTableBody');
+            tbody.innerHTML = '';
+
+            // Reference vols at spot 100
+            const refSmile = generateStickyDeltaSmile(100);
+            const refDeltas = refSmile.deltas;
+            const refVols = refSmile.vols;
+
+            // Vols at current spot (sticky delta)
+            const currentSmile = generateStickyDeltaSmile(currentSpot);
+            const currentDeltas = currentSmile.deltas;
+            const currentVols = currentSmile.vols;
+
+            // Local vol at spot 100
+            const localRef = generateLocalVolSmile(100, 100);
+            const localRefVols = localRef.vols;
+
+            // Local vol at current spot
+            const localCurrent = generateLocalVolSmile(currentSpot, 100);
+            const localCurrentVols = localCurrent.vols;
+
+            for (let i = 0; i < deltas.length; i++) {
+                const delta = deltas[i];
+                const idx = refDeltas.indexOf(delta);
+
+                if (idx >= 0) {
+                    const row = document.createElement('tr');
+                    const strikeIdx = Math.floor((delta - 0.1) / 0.25 * 8.5);
+                    
+                    row.innerHTML = `
+                        <td><strong>${Math.round(delta*100)}% Delta</strong></td>
+                        <td class="sticky-delta">${(refVols[idx]*100).toFixed(1)}%</td>
+                        <td class="sticky-delta">${(currentVols[idx]*100).toFixed(1)}%</td>
+                        <td class="local-vol">${(localRefVols[strikeIdx]*100).toFixed(1)}%</td>
+                        <td class="local-vol">${(localCurrentVols[strikeIdx]*100).toFixed(1)}%</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            }
+        }
+
+        function createCharts() {
+            const stickyCtx = document.getElementById('stickyDeltaChart').getContext('2d');
+            const localCtx = document.getElementById('localVolChart').getContext('2d');
+
+            const stickyData = generateStickyDeltaSmile(currentSpot);
+            const localData = generateLocalVolSmile(currentSpot);
+            const localDataInitial = generateLocalVolSmile(100, 100);
+
+            stickyDeltaChart = new Chart(stickyCtx, {
+                type: 'line',
+                data: {
+                    labels: stickyData.deltas.map(d => `${Math.round(d*100)}%`),
+                    datasets: [
+                        {
+                            label: 'Initial Smile (Spot=100)',
+                            data: generateStickyDeltaSmile(initialSpot).vols.map(v => (v*100).toFixed(1)),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#667eea',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        },
+                        {
+                            label: `Smile at Spot=${Math.round(currentSpot)}`,
+                            data: stickyData.vols.map(v => (v*100).toFixed(1)),
+                            borderColor: '#ff7043',
+                            backgroundColor: 'rgba(255, 112, 67, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#ff7043',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: { size: 11, weight: '600' }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 80,
+                            ticks: { callback: v => v + '%', font: { size: 10 } },
+                            title: { display: true, text: 'Implied Volatility (%)', font: { size: 11, weight: 'bold' } }
+                        },
+                        x: {
+                            title: { display: true, text: 'Delta', font: { size: 11, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+
+            localVolChart = new Chart(localCtx, {
+                type: 'line',
+                data: {
+                    labels: localData.strikes,
+                    datasets: [
+                        {
+                            label: 'Initial Smile (Spot=100)',
+                            data: localDataInitial.vols.map(v => (v*100).toFixed(1)),
+                            borderColor: '#ab47bc',
+                            backgroundColor: 'rgba(171, 71, 188, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#ab47bc',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        },
+                        {
+                            label: `Smile at Spot=${Math.round(currentSpot)}`,
+                            data: localData.vols.map(v => (v*100).toFixed(1)),
+                            borderColor: '#26a69a',
+                            backgroundColor: 'rgba(38, 166, 154, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#26a69a',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: { size: 11, weight: '600' }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 80,
+                            ticks: { callback: v => v + '%', font: { size: 10 } },
+                            title: { display: true, text: 'Implied Volatility (%)', font: { size: 11, weight: 'bold' } }
+                        },
+                        x: {
+                            title: { display: true, text: 'Strike Price ($)', font: { size: 11, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function startAnimation() {
+            if (animationRunning) return;
+            animationRunning = true;
+
+            let frame = 0;
+            const startSpot = currentSpot;
+            const targetSpot = currentSpot + 15;
+            const frames = 60;
+
+            function animateFrame() {
+                frame++;
+                const progress = frame / frames;
+                const easeProgress = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : -1 + (4 - 2 * progress) * progress;
+                
+                currentSpot = startSpot + (targetSpot - startSpot) * easeProgress;
+                document.getElementById('spotSlider').value = Math.round(currentSpot);
+                document.getElementById('spotValue').textContent = Math.round(currentSpot);
+
+                updateCharts();
+                updateComparisonTable();
+
+                if (frame < frames) {
+                    requestAnimationFrame(animateFrame);
+                } else {
+                    animationRunning = false;
+                }
+            }
+
+            animateFrame();
+        }
+
+        function resetSimulation() {
+            currentSpot = 100;
+            initialSpot = 100;
+            currentVol = 0.30;
+            document.getElementById('spotSlider').value = 100;
+            document.getElementById('volSlider').value = 30;
+            document.getElementById('spotValue').textContent = '100';
+            document.getElementById('volValue').textContent = '30%';
+            updateCharts();
+            updateComparisonTable();
+        }
+
+        document.getElementById('spotSlider').addEventListener('input', (e) => {
+            currentSpot = parseFloat(e.target.value);
+            document.getElementById('spotValue').textContent = Math.round(currentSpot);
+            updateCharts();
+            updateComparisonTable();
+        });
+
+        document.getElementById('volSlider').addEventListener('input', (e) => {
+            currentVol = parseFloat(e.target.value) / 100;
+            document.getElementById('volValue').textContent = e.target.value + '%';
+            updateCharts();
+            updateComparisonTable();
+        });
+
+        window.addEventListener('load', () => {
+            createCharts();
+            initCharts();
+        });
+    </script>
+</body>
+</html>
